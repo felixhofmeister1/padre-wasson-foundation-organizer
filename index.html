@@ -197,8 +197,13 @@
         <p class="truncate text-xs text-slate-500">Organizer</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <span id="wp-pill" class="pill hidden sm:inline-flex" title="WordPress connection">
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <div id="ui-lang" class="flex items-center gap-0.5 rounded-xl bg-slate-100 p-1" role="group" aria-label="Interface language / Sprache der Oberfläche" data-no-i18n>
+        <button type="button" class="lang-btn" data-ui-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="lang-btn" data-ui-lang="de" aria-pressed="false">DE</button>
+      </div>
+      <button type="button" id="reset-all" class="btn btn-ghost btn-xs" title="Reset everything"><i data-icon="reset" class="size-3.5"></i><span class="hidden sm:inline">Reset</span></button>
+      <span id="wp-pill" class="pill hidden lg:inline-flex" title="WordPress connection">
         <span class="dot" id="wp-dot"></span><span id="wp-label">WordPress · not connected</span>
       </span>
       <button type="button" class="btn-icon" data-open-settings aria-label="Settings"><i data-icon="settings" class="size-5"></i></button>
@@ -386,7 +391,7 @@
         <div>
           <label class="label" for="wp-pass">Application password</label>
           <div class="relative">
-            <input id="wp-pass" name="password" type="password" class="input pr-16 font-mono" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" autocomplete="current-password" spellcheck="false">
+            <input id="wp-pass" name="password" type="password" class="input pr-24 font-mono" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" autocomplete="current-password" spellcheck="false">
             <button type="button" id="wp-pass-toggle" class="absolute inset-y-0 right-1 my-1 rounded-lg px-2 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">Show</button>
           </div>
         </div>
@@ -480,7 +485,7 @@
     <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
       <div>
         <h2 id="settings-title" class="text-base font-semibold text-slate-900">Settings</h2>
-        <p class="text-sm text-slate-500">Brand look, generation engine and organization details.</p>
+        <p class="text-sm text-slate-500">Brand look and organization details.</p>
       </div>
       <button value="close" class="btn-icon -mr-2" aria-label="Close settings"><i data-icon="x" class="size-5"></i></button>
     </div>
@@ -641,6 +646,7 @@ const ICONS = {
   external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
   globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
   minus: '<path d="M5 12h14"/>',
+  reset: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
@@ -2808,7 +2814,7 @@ function initSettings() {
   $('#theme-from-logo').addEventListener('click', async () => { const pal = await paletteFromLogo(state.theme.logo).catch(() => null); if (pal) setTheme({ ...pal, preset: 'logo' }); });
 
   $('#clear-data').addEventListener('click', async () => {
-    if (!confirm('Clear saved notes, files, generated outputs and settings from this browser?')) return;
+    if (!confirm(tr('Clear saved notes, files, generated outputs and settings from this browser?'))) return;
     store.clear();
     await idb.clear().catch(() => {});
     location.reload();
@@ -2862,7 +2868,7 @@ function initFiles() {
   $('#files-add').addEventListener('click', pick);
   $('#files-folder').addEventListener('click', () => folder.click());
   $('#files-clear').addEventListener('click', () => {
-    if (!state.files.length || !confirm(`Remove all ${plural(state.files.length, 'file')}?`)) return;
+    if (!state.files.length || !confirm(tr(`Remove all ${plural(state.files.length, 'file')}?`))) return;
     state.files.forEach((f) => { if (objectUrls.has(f.id)) URL.revokeObjectURL(objectUrls.get(f.id)); idb.del(f.id).catch(() => {}); });
     objectUrls.clear();
     state.files = [];
@@ -2936,6 +2942,439 @@ function initFiles() {
       document.execCommand('insertText', false, ev.clipboardData.getData('text/plain'));
     }
   });
+}
+
+/* =====================================================================
+   15. INTERFACE LANGUAGE (EN / DE) + RESET
+   Every label, hint and message is written in English in the code and
+   translated here as it appears on screen. The user's own notes and the
+   generated campaign are never touched (they have their own DE/EN switch).
+   ===================================================================== */
+const UI_DE = {
+  'WordPress · not connected': 'WordPress · nicht verbunden',
+  'WordPress · connected': 'WordPress · verbunden',
+  'WordPress · error': 'WordPress · Fehler',
+  'WordPress · working…': 'WordPress · arbeitet…',
+  'WordPress connection': 'WordPress-Verbindung',
+  'Reset': 'Zurücksetzen',
+  'Reset everything': 'Alles zurücksetzen',
+  "Turn today's story into a full campaign.": 'Aus der Geschichte von heute wird eine ganze Kampagne.',
+  'Notes, photos and documents in, a blog post, social posts and a newsletter out, in German and English, ready for WordPress.': 'Notizen, Fotos und Dokumente rein – Blogartikel, Social-Media-Beiträge und Newsletter raus, auf Deutsch und Englisch, bereit für WordPress.',
+  'Progress': 'Fortschritt',
+  'Notes': 'Notizen',
+  'Notes & files': 'Notizen & Dateien',
+  'Generate': 'Erstellen',
+  'Review': 'Prüfen',
+  'Publish': 'Veröffentlichen',
+  'What happened?': 'Was ist passiert?',
+  'Paste notes or a transcript, and add photos and documents.': 'Notizen oder ein Protokoll einfügen und Fotos und Dokumente hinzufügen.',
+  'Example EN': 'Beispiel EN',
+  'Load German example notes': 'Deutsche Beispielnotizen laden',
+  'Load English example notes': 'Englische Beispielnotizen laden',
+  'Raw notes': 'Notizen',
+  'e.g.\nCharity run 2026 – team meeting notes\n- 230 runners, 3 school classes joined\n- €18,400 raised for school supplies\n- 40 volunteers at the stations\n- Next year: second run in Hamburg': 'z. B.\nSpendenlauf 2026 – Notizen aus dem Team-Meeting\n- 230 Läuferinnen und Läufer, 3 Schulklassen dabei\n- 18.400 € für Schulmaterial gesammelt\n- 40 Ehrenamtliche an den Ständen\n- Nächstes Jahr: zweiter Lauf in Hamburg',
+  'Clear': 'Leeren',
+  'Photos & files': 'Fotos & Dateien',
+  'Add photos and files': 'Fotos und Dateien hinzufügen',
+  'Drop photos & files here': 'Fotos & Dateien hierher ziehen',
+  'or': 'oder',
+  'choose files': 'Dateien auswählen',
+  'add a folder': 'Ordner hinzufügen',
+  '· paste with Ctrl+V': '· mit Strg+V einfügen',
+  'Photos, PDFs, Word, text, video, anything. Select as many as you like at once.': 'Fotos, PDFs, Word, Text, Video – alles. Beliebig viele auf einmal auswählen.',
+  'Add': 'Hinzufügen',
+  'Folder': 'Ordner',
+  'Add more': 'Mehr hinzufügen',
+  'Add more files': 'Weitere Dateien hinzufügen',
+  'Attached files – click a file to include or exclude it': 'Angehängte Dateien – Datei anklicken, um sie ein- oder auszuschließen',
+  'Star a photo to make it the featured image. Click a file to leave it out.': 'Ein Foto mit Stern wird zum Beitragsbild. Eine Datei anklicken, um sie auszulassen.',
+  'None selected': 'Nichts ausgewählt',
+  'Uploaded to WordPress': 'Zu WordPress hochgeladen',
+  'Upload failed': 'Upload fehlgeschlagen',
+  'Could not read': 'Nicht lesbar',
+  'Target language': 'Zielsprache',
+  'English': 'Englisch',
+  'German': 'Deutsch',
+  'Both': 'Beide',
+  'Both · DE + EN': 'Beide · DE + EN',
+  'Generate Campaign': 'Kampagne erstellen',
+  'Generating…': 'Wird erstellt…',
+  'Translating…': 'Wird übersetzt…',
+  'Ctrl ↵': 'Strg ↵',
+  'Works fully offline – no account or internet connection needed to generate a campaign.': 'Funktioniert komplett offline – kein Konto und keine Internetverbindung nötig, um eine Kampagne zu erstellen.',
+  'Pipeline': 'Ablauf',
+  'Generation': 'Erstellung',
+  'Six steps, one click.': 'Sechs Schritte, ein Klick.',
+  'Cancel': 'Abbrechen',
+  'Idle': 'Bereit',
+  'Running': 'Läuft',
+  'Complete': 'Fertig',
+  'Error': 'Fehler',
+  'Restored': 'Wiederhergestellt',
+  'Translating': 'Übersetzt',
+  'Read files & photos': 'Dateien & Fotos lesen',
+  'Text from documents, photos for the post': 'Text aus Dokumenten, Fotos für den Beitrag',
+  'Analyze notes': 'Notizen analysieren',
+  'Key facts, figures, tone and theme': 'Wichtige Fakten, Zahlen, Ton und Thema',
+  'WordPress blog post': 'WordPress-Blogartikel',
+  'Title, headings, paragraphs, call to action': 'Titel, Überschriften, Absätze, Handlungsaufruf',
+  'Social media captions': 'Social-Media-Texte',
+  'LinkedIn · Facebook · Google Business': 'LinkedIn · Facebook · Google Business',
+  'Mailchimp newsletter': 'Mailchimp-Newsletter',
+  'Subject, preview text, body, button': 'Betreff, Vorschautext, Inhalt, Button',
+  'German ⇄ English': 'Deutsch ⇄ Englisch',
+  'Localized second-language version': 'Version in der zweiten Sprache',
+  'No campaign generated yet.': 'Noch keine Kampagne erstellt.',
+  'Working…': 'Arbeitet…',
+  'Skipped': 'Übersprungen',
+  'Failed': 'Fehlgeschlagen',
+  'Done': 'Fertig',
+  'No files attached': 'Keine Dateien angehängt',
+  'Reading notes…': 'Notizen werden gelesen…',
+  'Deutsch + English versions ready': 'Deutsche und englische Version fertig',
+  'Using the existing campaign': 'Bestehende Kampagne wird verwendet',
+  'Simulated engine': 'Offline-Erstellung',
+  'Campaign outputs': 'Kampagnen-Ergebnisse',
+  'Edit anything inline, copy it, or send it to WordPress.': 'Alles direkt bearbeiten, kopieren oder an WordPress senden.',
+  'Language': 'Sprache',
+  'Output type': 'Art des Ergebnisses',
+  'Blog post': 'Blogartikel',
+  'Social posts': 'Social-Media-Beiträge',
+  'Newsletter': 'Newsletter',
+  'Show German version': 'Deutsche Version anzeigen',
+  'Show English version': 'Englische Version anzeigen',
+  'Create the German version': 'Deutsche Version erstellen',
+  'Create the English version': 'Englische Version erstellen',
+  'Your campaign will appear here': 'Hier erscheint Ihre Kampagne',
+  'Add your notes and photos, choose a language and press': 'Notizen und Fotos hinzufügen, Sprache wählen und auf',
+  ". You'll get a blog post, three social posts and a newsletter.": ' klicken. Sie erhalten einen Blogartikel, drei Social-Media-Beiträge und einen Newsletter.',
+  'Try it with example notes': 'Mit Beispielnotizen ausprobieren',
+  'Post title': 'Beitragstitel',
+  'Copy': 'Kopieren',
+  'Copied': 'Kopiert',
+  'Excerpt / meta description': 'Auszug / Meta-Beschreibung',
+  'Copy post': 'Beitrag kopieren',
+  'Copy HTML': 'HTML kopieren',
+  'Copy blocks': 'Blöcke kopieren',
+  'Featured image': 'Beitragsbild',
+  'Added to the post before the call to action when you export.': 'Wird beim Export vor dem Handlungsaufruf in den Beitrag eingefügt.',
+  'Edit': 'Bearbeiten',
+  "Alt text: what's in the photo?": 'Alternativtext: Was ist auf dem Foto?',
+  'Caption (optional)': 'Bildunterschrift (optional)',
+  'Alt text is sent to WordPress with each photo, which helps accessibility and search.': 'Der Alternativtext wird mit jedem Foto an WordPress gesendet – gut für Barrierefreiheit und Suchmaschinen.',
+  'Add photos in step 1 to get a featured image and a photo gallery in the post.': 'Fügen Sie in Schritt 1 Fotos hinzu, um ein Beitragsbild und eine Fotogalerie im Beitrag zu erhalten.',
+  'Click into any text to edit it. Changes are saved automatically and used for copying and the WordPress export.': 'Klicken Sie in einen Text, um ihn zu bearbeiten. Änderungen werden automatisch gespeichert und beim Kopieren und beim WordPress-Export verwendet.',
+  'Blog post body (editable)': 'Blogtext (bearbeitbar)',
+  'Professional · impact-focused · 3 hashtags': 'Professionell · wirkungsorientiert · 3 Hashtags',
+  'LinkedIn caption': 'LinkedIn-Text',
+  'Warm · community-oriented': 'Herzlich · gemeinschaftsorientiert',
+  'Facebook caption': 'Facebook-Text',
+  'Google Business Profile': 'Google-Unternehmensprofil',
+  'Short 2-sentence update': 'Kurzes Update in 2 Sätzen',
+  'Google Business Profile caption': 'Text für das Google-Unternehmensprofil',
+  '✓ 3 hashtags': '✓ 3 Hashtags',
+  '✓ Easy to read': '✓ Gut lesbar',
+  '! Long for Facebook – consider trimming': '! Lang für Facebook – eventuell kürzen',
+  '✓ 2 sentences': '✓ 2 Sätze',
+  'Photo': 'Foto',
+  'The starred photo from step 1': 'Das markierte Foto aus Schritt 1',
+  'Subject line': 'Betreffzeile',
+  'Preview text': 'Vorschautext',
+  'Inbox preview': 'Posteingangs-Vorschau',
+  'Unsubscribe · Update preferences': 'Abmelden · Einstellungen ändern',
+  'Greeting (editable)': 'Anrede (bearbeitbar)',
+  'Email body (editable)': 'E-Mail-Text (bearbeitbar)',
+  'Button text (editable)': 'Button-Text (bearbeitbar)',
+  'Sign-off (editable)': 'Grußformel (bearbeitbar)',
+  'Copy body': 'Inhalt kopieren',
+  'Copy button text': 'Button-Text kopieren',
+  'Copy email HTML': 'E-Mail-HTML kopieren',
+  '“Copy email HTML” gives you a responsive template in your brand colors, with Mailchimp merge tags (unsubscribe, address). Paste it into a': '„E-Mail-HTML kopieren“ liefert eine responsive Vorlage in Ihren Markenfarben mit Mailchimp-Merge-Tags (Abmelden, Adresse). Fügen Sie sie in eine',
+  'template or a Code block. The featured photo is included once it has been uploaded to WordPress.': '-Vorlage oder einen Code-Block ein. Das Beitragsbild ist enthalten, sobald es zu WordPress hochgeladen wurde.',
+  'template or a Code block.': '-Vorlage oder einen Code-Block ein.',
+  'Export to WordPress': 'An WordPress exportieren',
+  'Uploads your files and creates the drafts in one click, via the REST API.': 'Lädt Ihre Dateien hoch und erstellt die Entwürfe mit einem Klick über die REST-API.',
+  'Not connected': 'Nicht verbunden',
+  'Connected': 'Verbunden',
+  'Testing…': 'Wird getestet…',
+  'Uploading…': 'Wird hochgeladen…',
+  'Creating…': 'Wird erstellt…',
+  'Partly done': 'Teilweise erledigt',
+  'No permission': 'Keine Berechtigung',
+  'WordPress site URL': 'WordPress-Adresse (URL)',
+  'Username': 'Benutzername',
+  'Application password': 'Anwendungspasswort',
+  'Show': 'Anzeigen',
+  'Hide': 'Verbergen',
+  'Post status': 'Beitragsstatus',
+  'Draft': 'Entwurf',
+  'Pending review': 'Ausstehende Überprüfung',
+  'Private': 'Privat',
+  'Languages': 'Sprachen',
+  'All generated': 'Alle erstellten',
+  'Currently shown': 'Aktuell angezeigte',
+  'German only': 'Nur Deutsch',
+  'English only': 'Nur Englisch',
+  'Content format': 'Inhaltsformat',
+  'Gutenberg blocks': 'Gutenberg-Blöcke',
+  'Classic HTML': 'Klassisches HTML',
+  'Upload all selected files': 'Alle ausgewählten Dateien hochladen',
+  'Into the Media Library, all at once': 'In die Mediathek, alle auf einmal',
+  "The starred photo becomes the post's featured image": 'Das markierte Foto wird zum Beitragsbild',
+  'Photo gallery': 'Fotogalerie',
+  'Other photos and videos go into the post': 'Weitere Fotos und Videos kommen in den Beitrag',
+  'Download links': 'Download-Links',
+  'Link uploaded documents at the end of the post': 'Hochgeladene Dokumente am Ende des Beitrags verlinken',
+  'Remember site URL and username on this device': 'Adresse und Benutzername auf diesem Gerät merken',
+  '(the password is never stored)': '(das Passwort wird nie gespeichert)',
+  'Test connection': 'Verbindung testen',
+  'Copy as cURL': 'Als cURL kopieren',
+  'Export results will be listed here.': 'Die Export-Ergebnisse erscheinen hier.',
+  'All files uploaded': 'Alle Dateien hochgeladen',
+  'Queued': 'In Warteschlange',
+  'Uploaded': 'Hochgeladen',
+  'Already uploaded': 'Bereits hochgeladen',
+  'Edit in WordPress': 'In WordPress bearbeiten',
+  'Preview': 'Vorschau',
+  'Open Media Library': 'Mediathek öffnen',
+  'How to set up WordPress access': 'So richten Sie den WordPress-Zugang ein',
+  'In WordPress, open': 'Öffnen Sie in WordPress',
+  'Users → Profile': 'Benutzer → Profil',
+  'and scroll to': 'und scrollen Sie zu',
+  'Application Passwords': 'Anwendungspasswörter',
+  'Enter a name such as “Foundation Organizer”, click': 'Geben Sie einen Namen wie „Foundation Organizer“ ein, klicken Sie auf',
+  'Add New Application Password': 'Neues Anwendungspasswort hinzufügen',
+  'and paste the generated password above. Use your normal WordPress username.': 'und fügen Sie das erzeugte Passwort oben ein. Verwenden Sie Ihren normalen WordPress-Benutzernamen.',
+  'The site must run on': 'Die Website muss über',
+  ', and the user needs at least the': 'laufen, und der Benutzer braucht mindestens die Rolle',
+  'Author': 'Autor',
+  'role to create posts and upload files.': 'haben, um Beiträge zu erstellen und Dateien hochzuladen.',
+  "Large videos can be bigger than the server's upload limit (often 8–64 MB). Those files will show an error and the rest still upload.": 'Große Videos können das Upload-Limit des Servers überschreiten (oft 8–64 MB). Diese Dateien zeigen dann einen Fehler, der Rest wird trotzdem hochgeladen.',
+  'If the test fails with a network error, a security plugin or firewall may be blocking the REST API or cross-origin requests. Use': 'Wenn der Test mit einem Netzwerkfehler scheitert, blockiert vielleicht ein Sicherheits-Plugin oder eine Firewall die REST-API. Nutzen Sie',
+  'to upload from a terminal instead.': 'für den Upload über ein Terminal.',
+  '· Organizer · Notes, files and settings are stored only in this browser.': '· Organizer · Notizen, Dateien und Einstellungen werden nur in diesem Browser gespeichert.',
+  'Drop to add your files': 'Loslassen, um Dateien hinzuzufügen',
+  'Photos, PDFs, Word, text, video, whole folders. Everything gets selected automatically.': 'Fotos, PDFs, Word, Text, Video, ganze Ordner. Alles wird automatisch ausgewählt.',
+  'Settings': 'Einstellungen',
+  'Close settings': 'Einstellungen schließen',
+  'Brand look and organization details.': 'Erscheinungsbild und Angaben zur Organisation.',
+  'Brand look': 'Erscheinungsbild',
+  'Foundation logo': 'Logo der Stiftung',
+  'Upload the foundation logo': 'Logo der Stiftung hochladen',
+  "Upload the Padre Wasson Foundation logo. It's used in the header and the app takes its colors automatically.": 'Laden Sie das Logo der Padre Wasson Foundation hoch. Es erscheint in der Kopfzeile, und die App übernimmt automatisch seine Farben.',
+  'Upload logo': 'Logo hochladen',
+  'Use logo colors': 'Logofarben verwenden',
+  'Remove': 'Entfernen',
+  'Color themes': 'Farbschemata',
+  'Blue & white': 'Blau & Weiß',
+  'Family teal': 'Familien-Petrol',
+  'Warm sunrise': 'Warmer Sonnenaufgang',
+  'Ocean & coral': 'Ozean & Koralle',
+  'Forest & amber': 'Wald & Bernstein',
+  'Plum & rose': 'Pflaume & Rosé',
+  'Classic navy': 'Klassisches Marineblau',
+  'From your logo': 'Aus Ihrem Logo',
+  'Custom': 'Eigene Farben',
+  'Main color': 'Hauptfarbe',
+  'Accent color': 'Akzentfarbe',
+  'Pick the main color': 'Hauptfarbe wählen',
+  'Pick the accent color': 'Akzentfarbe wählen',
+  'Organization': 'Organisation',
+  'Name used in the content': 'Name in den Texten',
+  'Donation / call-to-action link': 'Spenden- bzw. Aktionslink',
+  'Used for the blog button, the newsletter button and the social captions.': 'Wird für den Blog-Button, den Newsletter-Button und die Social-Media-Texte verwendet.',
+  'Notes, files, outputs and settings are kept in this browser only.': 'Notizen, Dateien, Ergebnisse und Einstellungen bleiben nur in diesem Browser.',
+  'Clear saved data': 'Gespeicherte Daten löschen',
+  // Messages
+  'Campaign ready – review and copy your content.': 'Kampagne fertig – Inhalte prüfen und kopieren.',
+  'Add a few notes or some files first.': 'Bitte zuerst ein paar Notizen oder Dateien hinzufügen.',
+  'Add some notes or a document with text in it.': 'Bitte Notizen oder ein Dokument mit Text hinzufügen.',
+  'Copy failed – your browser blocked clipboard access.': 'Kopieren fehlgeschlagen – der Browser hat den Zugriff auf die Zwischenablage blockiert.',
+  'Enter your WordPress site URL.': 'Bitte die WordPress-Adresse eingeben.',
+  'Enter your WordPress username.': 'Bitte den WordPress-Benutzernamen eingeben.',
+  'Enter an application password (Users → Profile → Application Passwords).': 'Bitte ein Anwendungspasswort eingeben (Benutzer → Profil → Anwendungspasswörter).',
+  'Generate a campaign or add files first.': 'Bitte zuerst eine Kampagne erstellen oder Dateien hinzufügen.',
+  'The site URL does not look valid.': 'Die Adresse scheint ungültig zu sein.',
+  'No WordPress REST API found at this address (404). Check the site URL.': 'Unter dieser Adresse wurde keine WordPress-REST-API gefunden (404). Bitte die Adresse prüfen.',
+  'The site answered, but not with WordPress REST API data. Check the site URL.': 'Die Website antwortet, aber nicht mit WordPress-REST-API-Daten. Bitte die Adresse prüfen.',
+  'The file is larger than the server allows (413).': 'Die Datei ist größer, als der Server erlaubt (413).',
+  'This page runs on HTTPS, so it cannot call an http:// site. Use the https:// address of your WordPress site.': 'Diese Seite läuft über HTTPS und kann keine http://-Website aufrufen. Bitte die https://-Adresse der WordPress-Seite verwenden.',
+  'Those files are already attached.': 'Diese Dateien sind bereits angehängt.',
+  'Please choose an image file (PNG, JPG, SVG or WebP).': 'Bitte eine Bilddatei wählen (PNG, JPG, SVG oder WebP).',
+  'This image format cannot be displayed in the browser.': 'Dieses Bildformat kann im Browser nicht angezeigt werden.',
+  'German example notes loaded.': 'Deutsche Beispielnotizen geladen.',
+  'English example notes loaded.': 'Englische Beispielnotizen geladen.',
+  'cURL commands copied. Paste them into a terminal.': 'cURL-Befehle kopiert. In ein Terminal einfügen.',
+  'Logo added – colors taken from your logo.': 'Logo hinzugefügt – Farben aus dem Logo übernommen.',
+  'Logo added. It has no strong colors, so the current theme stays.': 'Logo hinzugefügt. Es hat keine kräftigen Farben, daher bleibt das aktuelle Farbschema.',
+  'Some files are too large to keep after a reload. They work fine until then.': 'Einige Dateien sind zu groß, um nach dem Neuladen erhalten zu bleiben. Bis dahin funktionieren sie normal.',
+  'Could not load the Word reader.': 'Der Word-Leser konnte nicht geladen werden.',
+  'Clear saved notes, files, generated outputs and settings from this browser?': 'Gespeicherte Notizen, Dateien, Ergebnisse und Einstellungen aus diesem Browser löschen?',
+  'Reset everything? Your notes, files, generated texts and WordPress details will be removed. Your colors, logo, organization details and language stay.': 'Alles zurücksetzen? Notizen, Dateien, erstellte Texte und WordPress-Angaben werden entfernt. Farben, Logo, Angaben zur Organisation und Sprache bleiben erhalten.',
+  'Everything has been reset.': 'Alles wurde zurückgesetzt.',
+};
+const THEME_DE = Object.fromEntries(Object.values(THEMES).map((t) => [t.en.label, t.de.label]));
+const COPY_LABEL_DE = { 'Post title': 'Beitragstitel', 'Excerpt': 'Auszug', 'Blog post': 'Blogartikel', 'Blog HTML': 'Blog-HTML', 'Gutenberg block markup': 'Gutenberg-Block-Code', 'LinkedIn caption': 'LinkedIn-Text', 'Facebook caption': 'Facebook-Text', 'Google Business update': 'Google-Business-Update', 'Subject line': 'Betreffzeile', 'Preview text': 'Vorschautext', 'Email body': 'E-Mail-Text', 'Button text': 'Button-Text', 'Email HTML': 'E-Mail-HTML' };
+const UNIT_DE = {
+  file: ['Datei', 'Dateien'], photo: ['Foto', 'Fotos'], video: ['Video', 'Videos'], PDF: ['PDF', 'PDFs'],
+  'Word doc': ['Word-Dokument', 'Word-Dokumente'], 'text file': ['Textdatei', 'Textdateien'], 'audio file': ['Audiodatei', 'Audiodateien'],
+  'other file': ['andere Datei', 'andere Dateien'], 'more photo': ['weiteres Foto', 'weitere Fotos'], word: ['Wort', 'Wörter'], page: ['Seite', 'Seiten'],
+  draft: ['Entwurf', 'Entwürfe'], document: ['Dokument', 'Dokumente'], fact: ['Fakt', 'Fakten'], sentence: ['Satz', 'Sätze'],
+  error: ['Fehler', 'Fehler'], duplicate: ['Duplikat', 'Duplikate'], hashtag: ['Hashtag', 'Hashtags'],
+};
+/** "3 photos · 1 PDF" → "3 Fotos · 1 PDF" */
+function deUnits(s) {
+  return String(s)
+    .replace(/([\d.,]+) words read/g, '$1 Wörter gelesen')
+    .replace(/([\d.,]+) min read/g, '$1 Min. Lesezeit')
+    .replace(/([\d.,]+) (Word docs?|text files?|audio files?|other files?|more photos?|files?|photos?|videos?|PDFs?|words?|pages?|drafts?|documents?|facts?|sentences?|errors?|duplicates?|hashtags?)\b/g, (m, n, u) => {
+      const key = UNIT_DE[u] ? u : u.replace(/s$/, '');
+      const pair = UNIT_DE[key];
+      if (!pair) return m;
+      return `${n} ${Number(n.replace(/,/g, '')) === 1 ? pair[0] : pair[1]}`;
+    })
+    .replace(/ · editable$/, ' · bearbeitbar');
+}
+const langDe = (x) => ({ German: 'Deutsch', English: 'Englisch', Deutsch: 'Deutsch' }[x] || x);
+const UI_DE_PATTERNS = [
+  [/^Good (morning|afternoon|evening) · (.+)$/, (m, t, d) => `${{ morning: 'Guten Morgen', afternoon: 'Guten Tag', evening: 'Guten Abend' }[t]} · ${d}`],
+  [/^([\d,.]+) words · ([\d,.]+) characters$/, '$1 Wörter · $2 Zeichen'],
+  [/^([\d,.]+) words · ([\d,.]+) \/ 3,000$/, '$1 Wörter · $2 / 3.000'],
+  [/^All (\d+) files? selected · (.+)$/, (m, n, b) => `${n === '1' ? '1 Datei' : `Alle ${n} Dateien`} ausgewählt · ${b}`],
+  [/^(\d+) of (\d+) selected · (.+)$/, '$1 von $2 ausgewählt · $3'],
+  [/^Reading (\d+)…$/, '$1 werden gelesen…'],
+  [/^Reading (.+)…$/, (m, x) => `${deUnits(x)} werden gelesen…`],
+  [/^Notes in (German|English)$/, (m, l) => `Notizen auf ${langDe(l)}`],
+  [/^Works fully offline with your notes and (.+) – no account or internet connection needed to generate a campaign\.$/, (m, x) => `Funktioniert komplett offline mit Ihren Notizen und ${deUnits(x)} – kein Konto und keine Internetverbindung nötig.`],
+  [/^(.+) into the Media Library, all at once$/, (m, x) => `${deUnits(x)} in die Mediathek, alle auf einmal`],
+  [/^Upload (.+) to WordPress$/, (m, x) => `${deUnits(x)} zu WordPress hochladen`],
+  [/^Export (\d.+)$/, (m, x) => `${deUnits(x)} exportieren`],
+  [/^Added (.+?) \((.+)\) – all selected\.(.*)$/, (m, a, k, rest) => `${deUnits(a)} hinzugefügt (${deUnits(k)}) – alle ausgewählt.${deUnits(rest).replace('skipped', 'übersprungen')}`],
+  [/^Added (.+?) – all selected\.(.*)$/, (m, a, rest) => `${deUnits(a)} hinzugefügt – alle ausgewählt.${deUnits(rest).replace('skipped', 'übersprungen')}`],
+  [/^(.+) over 64 MB may exceed your WordPress upload limit\.$/, (m, x) => `${deUnits(x)} über 64 MB überschreiten eventuell das Upload-Limit von WordPress.`],
+  [/^(\d+) facts · (German|English) · theme: (.+)$/, (m, n, l, t) => `${n} Fakten · ${langDe(l)} · Thema: ${THEME_DE[t] || t}`],
+  [/^Subject: (.+)$/, 'Betreff: $1'],
+  [/^Only (Deutsch|English) requested$/, (m, l) => `Nur ${langDe(l)} angefordert`],
+  [/^Building the (German|English) version…$/, (m, l) => `Die ${l === 'German' ? 'deutsche' : 'englische'} Version wird erstellt…`],
+  [/^(Deutsch|English) version ready$/, (m, l) => `${l === 'Deutsch' ? 'Deutsche' : 'Englische'} Version fertig`],
+  [/^(German|English) version ready\.$/, (m, l) => `${l === 'German' ? 'Deutsche' : 'Englische'} Version fertig.`],
+  [/^Restored from your last session · (.+)$/, (m, x) => `Aus der letzten Sitzung wiederhergestellt · ${x.replace(/^Simulated engine/, 'Offline-Erstellung')}`],
+  [/^Simulated engine · (.+)$/, 'Offline-Erstellung · $1'],
+  [/^([\d,.]+) \/ (\d+) · long for SEO$/, '$1 / $2 · lang für SEO'],
+  [/^([\d,.]+) \/ (\d+) · may be cut off$/, '$1 / $2 · wird evtl. abgeschnitten'],
+  [/^! (\d+) hashtags \(3 recommended\)$/, '! $1 Hashtags (3 empfohlen)'],
+  [/^! (\d+) sentences \(2 recommended\)$/, '! $1 Sätze (2 empfohlen)'],
+  [/^([\d,.]+) words in the body · button: “(.*)”$/, '$1 Wörter im Text · Button: „$2“'],
+  [/^\+(.+) selected$/, (m, x) => `+${deUnits(x)} ausgewählt`],
+  [/^Suggested photo · (.+)$/, 'Vorgeschlagenes Foto · $1'],
+  [/^Photo gallery · (\d+)$/, 'Fotogalerie · $1'],
+  [/^Alt text & captions · (.+)$/, (m, x) => `Alternativtexte & Bildunterschriften · ${deUnits(x)}`],
+  [/^Alt text for (.+)$/, 'Alternativtext für $1'],
+  [/^Caption for (.+)$/, 'Bildunterschrift für $1'],
+  [/^Remove all (.+)\?$/, (m, x) => `Alle ${deUnits(x)} entfernen?`],
+  [/^Remove (.+)$/, '$1 entfernen'],
+  [/^Use (.+) as featured image$/, '$1 als Beitragsbild verwenden'],
+  [/^(.+), (Photo|Video|Audio|PDF|Word|Text|File), (selected|not selected)(, featured image)?$/, (m, n, k, s, f) => `${n}, ${{ Photo: 'Foto', Video: 'Video', Audio: 'Audio', PDF: 'PDF', Word: 'Word', Text: 'Text', File: 'Datei' }[k]}, ${s === 'selected' ? 'ausgewählt' : 'nicht ausgewählt'}${f ? ', Beitragsbild' : ''}`],
+  [/^(.+) copied to clipboard\.$/, (m, l) => `${COPY_LABEL_DE[l] || l} in die Zwischenablage kopiert.`],
+  [/^“(.+)” is now the featured image\.$/, '„$1“ ist jetzt das Beitragsbild.'],
+  [/^Uploading (.+) at once · (\d+) of (\d+) done$/, (m, x, a, b) => `${deUnits(x)} werden gleichzeitig hochgeladen · ${a} von ${b} fertig`],
+  [/^All (.+) already in the Media Library$/, (m, x) => `Alle ${deUnits(x)} sind bereits in der Mediathek`],
+  [/^Finished with (.+)$/, (m, x) => `Beendet mit ${deUnits(x)}`],
+  [/^(.+) sent to WordPress(.*)\.$/, (m, x, rest) => `${deUnits(x).replace(' and ', ' und ')} an WordPress gesendet${rest.replace(/, (\d+) failed/, ', $1 fehlgeschlagen')}.`],
+  [/^(draft|post) created \(ID (\d+)\): (.+)$/, (m, k, id, t) => `${k === 'draft' ? 'Entwurf' : 'Beitrag'} erstellt (ID ${id}): ${t.replace(' · with featured image', ' · mit Beitragsbild')}`],
+  [/^uploaded to the Media Library\.(.*)$/, (m, rest) => `in die Mediathek hochgeladen.${rest.replace(/\((\d+) were already there\)/, '($1 waren bereits vorhanden)')}`],
+  [/^could not be uploaded:(.*)$/, 'konnten nicht hochgeladen werden:$1'],
+  [/^Connected to$/, 'Verbunden mit'],
+  [/^Could not reach (.+)\. Check the URL, and that the REST API is not blocked by a security plugin, firewall or CORS policy\. “Copy as cURL” works as an alternative\.$/, '$1 ist nicht erreichbar. Bitte die Adresse prüfen und ob die REST-API durch ein Sicherheits-Plugin, eine Firewall oder CORS blockiert wird. „Als cURL kopieren“ ist eine Alternative.'],
+  [/^WordPress rejected the login \(401\): (.+)\. Check the username and application password\.$/, 'WordPress hat die Anmeldung abgelehnt (401): $1. Bitte Benutzername und Anwendungspasswort prüfen.'],
+  [/^Permission denied \(403\): (.+)\. The user needs at least the Author role\.$/, 'Keine Berechtigung (403): $1. Der Benutzer braucht mindestens die Rolle „Autor“.'],
+  [/^WordPress error (\d+): (.+)$/, 'WordPress-Fehler $1: $2'],
+  [/^Could not load the PDF reader \((.+)\)\.$/, 'Der PDF-Leser konnte nicht geladen werden ($1).'],
+];
+function toDe(s) {
+  if (Object.prototype.hasOwnProperty.call(UI_DE, s)) return UI_DE[s];
+  for (const [re, rep] of UI_DE_PATTERNS) if (re.test(s)) return s.replace(re, rep);
+  if (/^[\d“]/.test(s)) { const d = deUnits(s); if (d !== s) return d; }
+  return null;
+}
+
+const I18N_SKIP = 'script, style, textarea, [contenteditable], .pw-article, .pw-email, #inbox-subject, #inbox-preview, [data-no-i18n]';
+const I18N_ATTRS = ['placeholder', 'title', 'aria-label'];
+const i18n = {
+  lang: store.get('uiLang', (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en'),
+  text: new WeakMap(),
+  attrs: new WeakMap(),
+};
+/** Translates one English UI string for the current interface language. */
+function tr(s) {
+  if (i18n.lang !== 'de' || s == null) return s;
+  const k = String(s).trim();
+  if (!k) return s;
+  const d = toDe(k);
+  return d == null ? s : String(s).replace(k, () => d);
+}
+function i18nText(n) {
+  const el = n.parentElement;
+  if (!el || el.closest(I18N_SKIP)) return;
+  const cur = n.nodeValue;
+  const rec = i18n.text.get(n);
+  const en = rec && cur === rec.out ? rec.en : cur;
+  const out = tr(en);
+  i18n.text.set(n, { en, out });
+  if (cur !== out) n.nodeValue = out;
+}
+function i18nAttrs(el) {
+  if (el.closest('[data-no-i18n]')) return;
+  let map = i18n.attrs.get(el);
+  for (const a of I18N_ATTRS) {
+    if (!el.hasAttribute(a)) continue;
+    if (!map) { map = {}; i18n.attrs.set(el, map); }
+    const cur = el.getAttribute(a);
+    const rec = map[a];
+    const en = rec && cur === rec.out ? rec.en : cur;
+    const out = tr(en);
+    map[a] = { en, out };
+    if (cur !== out) el.setAttribute(a, out);
+  }
+}
+function i18nTree(root) {
+  if (root.nodeType === Node.TEXT_NODE) { i18nText(root); return; }
+  if (root.nodeType !== Node.ELEMENT_NODE) return;
+  i18nAttrs(root);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let n;
+  while ((n = w.nextNode())) { if (n.nodeType === Node.TEXT_NODE) i18nText(n); else i18nAttrs(n); }
+}
+function setUiLang(lang) {
+  i18n.lang = lang === 'de' ? 'de' : 'en';
+  store.set('uiLang', i18n.lang);
+  document.documentElement.lang = i18n.lang;
+  $$('#ui-lang [data-ui-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.uiLang === i18n.lang)));
+  i18nTree(document.body);
+  positionInk();
+}
+function initI18n() {
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.type === 'childList') m.addedNodes.forEach(i18nTree);
+      else if (m.type === 'characterData') i18nText(m.target);
+      else if (m.type === 'attributes') i18nAttrs(m.target);
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
+  $('#ui-lang').addEventListener('click', (ev) => { const b = ev.target.closest('[data-ui-lang]'); if (b) setUiLang(b.dataset.uiLang); });
+  setUiLang(i18n.lang);
+}
+
+/** Starts over: removes notes, files, outputs and WordPress details; keeps colors, logo, organization and language. */
+async function resetAll() {
+  if (state.busy || state.exporting) return;
+  if (!confirm(tr('Reset everything? Your notes, files, generated texts and WordPress details will be removed. Your colors, logo, organization details and language stay.'))) return;
+  const keep = { theme: store.get('theme', null), settings: store.get('settings', null), uiLang: store.get('uiLang', null) };
+  store.clear();
+  await idb.clear().catch(() => {});
+  for (const [k, v] of Object.entries(keep)) if (v != null) store.set(k, v);
+  store.set('justReset', true);
+  location.reload();
 }
 
 function boot() {
@@ -3031,6 +3470,11 @@ function boot() {
 
   // Make Enter in editable previews create paragraphs rather than <div>s.
   try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch { /* not supported */ }
+
+  // Interface language + reset
+  initI18n();
+  $('#reset-all').addEventListener('click', resetAll);
+  if (store.get('justReset', false)) { store.del('justReset'); toast('Everything has been reset.', 'success', 2500); }
 }
 
 boot();

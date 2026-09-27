@@ -9,6 +9,10 @@ A single-file web app (`index.html`) that turns notes, photos and documents into
 
 Every output can be edited inline and copied.
 
+**Interface language:** switch the whole app between English and German with the EN / DE buttons in the header (it starts in German on German browsers). This only changes the app's labels and messages; your notes and the generated campaign keep their own language.
+
+**Reset:** the Reset button in the header clears notes, files, generated texts and WordPress details in one go. Colors, logo, organization details and the language setting stay.
+
 
 ## Running it
 
