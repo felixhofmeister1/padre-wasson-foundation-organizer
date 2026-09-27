@@ -12,7 +12,7 @@ Every output can be edited inline and copied.
 
 ## Running it
 
-Open `index.html` in a browser, or serve the folder with any static web server. There is no build step. Tailwind CSS, fonts, the PDF and Word readers and the Anthropic SDK load from CDNs when needed.
+Open `index.html` in a browser, or serve the folder with any static web server. There is no build step, no account and no internet connection needed to generate a campaign. Tailwind CSS, fonts, and the PDF/Word readers load from CDNs when a file needs them.
 
 ## Photos & files
 
@@ -22,24 +22,17 @@ Drop anything into step 1: photos, PDFs, Word files (.docx), text files, videos,
 - **Featured image:** the first photo becomes the featured image. Click the star on another photo to change it.
 - **Reading:** text is read from PDFs, Word and text files and used as source material.
 - **Storage:** files are kept in the browser (IndexedDB), so they are still there after a reload.
-- **Alt text:** each photo gets alt text, which you can edit under "Alt text & captions" in the blog tab. The Claude engine writes it from what is actually in the photo; the simulated engine derives it from the file name.
+- **Alt text:** each photo gets alt text derived from its file name, editable under "Alt text & captions" in the blog tab.
 
 ## Branding
 
-In **Settings → Brand look**, upload the foundation's logo. The app shows it in the header and takes its main and accent colors from it automatically.
+In **Settings → Brand look**, upload the foundation's logo. The app shows it in the header and takes its main and accent colors from it automatically. It defaults to a blue-and-white theme until a logo is uploaded.
 
 You can also pick a preset or enter exact hex codes. The colors are used throughout the app and in the exported newsletter HTML.
 
-## Generation engines
+## How it writes the campaign
 
-Switch engines in **Settings** (the sliders icon in the header).
-
-| Engine | What it does |
-|---|---|
-| **Simulated** (default) | Works offline. It analyzes the notes and documents (facts, figures, quotes, next steps, theme) and fills localized templates. It does not translate the facts themselves: German notes stay German inside English templates, and a notice says so. |
-| **Claude API** | Real AI writing and translation through the official Anthropic TypeScript SDK with structured JSON output. Claude sees up to 20 photos and reads PDFs natively. Default model: Claude Opus 5, with server-side refusal fallback enabled. Claude Sonnet 5 is also available. |
-
-**API key security:** in Claude API mode the browser calls the API directly, so the key is visible to anyone who can use the page on that device. It is kept in memory unless you tick "Remember". For shared or public deployments, set **API base URL** to your own server-side proxy that adds the key, and leave the key field empty.
+The app analyzes your notes and any attached documents (facts, figures, quotes, next steps, theme) entirely offline in the browser, and fills localized templates for German and English. It does not translate the facts themselves: German notes stay German inside English templates, and a notice says so.
 
 ## WordPress export
 

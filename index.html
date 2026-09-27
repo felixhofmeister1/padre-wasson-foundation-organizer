@@ -198,9 +198,6 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" id="engine-pill" class="pill whitespace-nowrap" data-open-settings title="Generation engine – click to change">
-        <span class="dot" id="engine-dot"></span><span id="engine-label" class="max-w-[8.5rem] truncate sm:max-w-none">Simulated engine</span>
-      </button>
       <span id="wp-pill" class="pill hidden sm:inline-flex" title="WordPress connection">
         <span class="dot" id="wp-dot"></span><span id="wp-label">WordPress · not connected</span>
       </span>
@@ -525,63 +522,6 @@
         </div>
       </section>
 
-      <!-- Engine -->
-      <fieldset>
-        <legend class="label">Generation engine</legend>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <label class="cursor-pointer">
-            <input type="radio" name="engine" value="simulated" class="peer sr-only">
-            <span class="block h-full rounded-2xl border border-slate-200 p-4 transition hover:border-slate-300 peer-checked:border-brand-600 peer-checked:bg-brand-50/60 peer-checked:ring-2 peer-checked:ring-brand-600/20 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-500/30">
-              <span class="flex items-center gap-2 text-sm font-semibold text-slate-900"><span class="dot bg-amber-400"></span>Simulated</span>
-              <span class="mt-1 block text-xs leading-relaxed text-slate-500">Offline and instant. Reads your notes and documents and fills localized templates. Good for demos and testing the workflow.</span>
-            </span>
-          </label>
-          <label class="cursor-pointer">
-            <input type="radio" name="engine" value="claude" class="peer sr-only">
-            <span class="block h-full rounded-2xl border border-slate-200 p-4 transition hover:border-slate-300 peer-checked:border-brand-600 peer-checked:bg-brand-50/60 peer-checked:ring-2 peer-checked:ring-brand-600/20 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-500/30">
-              <span class="flex items-center gap-2 text-sm font-semibold text-slate-900"><span class="dot bg-emerald-500"></span>Claude API</span>
-              <span class="mt-1 block text-xs leading-relaxed text-slate-500">AI writing and real German ⇄ English translation. Claude also looks at your photos and PDFs and writes alt text. Needs an API key.</span>
-            </span>
-          </label>
-        </div>
-      </fieldset>
-
-      <div id="claude-settings" class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-        <div>
-          <label class="label" for="api-key">Anthropic API key</label>
-          <input id="api-key" type="password" class="input font-mono" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
-          <label class="mt-2 flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" id="remember-key" class="size-4 rounded border-slate-300"> Remember the key in this browser
-          </label>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="label" for="model">Model</label>
-            <select id="model" class="input">
-              <option value="claude-opus-5">Claude Opus 5 (recommended)</option>
-              <option value="claude-sonnet-5">Claude Sonnet 5 (faster)</option>
-            </select>
-          </div>
-          <div>
-            <label class="label" for="effort">Effort</label>
-            <select id="effort" class="input">
-              <option value="high">High · best quality</option>
-              <option value="medium">Medium · faster</option>
-              <option value="low">Low · fastest</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="label" for="base-url">API base URL <span class="font-normal text-slate-400">(optional)</span></label>
-          <input id="base-url" type="url" class="input" placeholder="https://api.anthropic.com" spellcheck="false">
-          <p class="mt-1.5 text-xs leading-relaxed text-slate-500">Point this at your own server-side proxy in production so the API key never has to live in the browser. With a proxy, the key field can stay empty.</p>
-        </div>
-        <p class="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-200">
-          <i data-icon="alert" class="mt-px size-4 shrink-0"></i>
-          <span>Calling the API straight from the browser exposes the key to anyone who can open this page on this device. Only use it on trusted computers, or use a proxy.</span>
-        </p>
-      </div>
-
       <fieldset class="space-y-4">
         <legend class="label">Organization</legend>
         <div>
@@ -613,20 +553,17 @@
    Padre Wasson Foundation · Organizer
    Single-file app: notes + photos + documents → blog post, social posts,
    newsletter (DE/EN) → WordPress drafts and Media Library uploads.
-   Engines: "simulated" (offline templates) or the Claude API (official
-   Anthropic TypeScript SDK, loaded on demand).
+   Runs entirely offline with the simulated engine: notes and documents
+   in, localized templates filled in, no external AI calls.
    ===================================================================== */
 
 const CDN = {
-  sdk: 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.128.0/+esm',
   pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs',
   pdfWorker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs',
   mammoth: 'https://cdn.jsdelivr.net/npm/mammoth@1.12.3/mammoth.browser.min.js',
 };
 const LANG_NAMES = { de: 'German', en: 'English' };
 const LANG_NATIVE = { de: 'Deutsch', en: 'English' };
-const MODEL_LABELS = { 'claude-opus-5': 'Claude Opus 5', 'claude-sonnet-5': 'Claude Sonnet 5' };
-const MAX_API_IMAGES = 20;
 const UPLOAD_PARALLEL = 6;
 
 /* ---------------------------------------------------------------------
@@ -777,10 +714,10 @@ function confetti(fromEl) {
    App state
    --------------------------------------------------------------------- */
 const DEFAULT_SETTINGS = {
-  engine: 'simulated', apiKey: '', rememberKey: false, model: 'claude-opus-5', effort: 'high', baseURL: '',
   orgName: 'Padre Wasson Foundation', ctaUrl: '',
 };
 const PRESETS = [
+  { id: 'blue', name: 'Blue & white', brand: '#1e3a8a', accent: '#2563eb' },
   { id: 'family', name: 'Family teal', brand: '#1f5d58', accent: '#e0712a' },
   { id: 'sunrise', name: 'Warm sunrise', brand: '#7a2e24', accent: '#e39a2d' },
   { id: 'ocean', name: 'Ocean & coral', brand: '#1d3f72', accent: '#e8604c' },
@@ -790,7 +727,7 @@ const PRESETS = [
 ];
 const state = {
   settings: { ...DEFAULT_SETTINGS, ...store.get('settings', {}) },
-  theme: { preset: 'family', brand: PRESETS[0].brand, accent: PRESETS[0].accent, logo: '', ...store.get('theme', {}) },
+  theme: { preset: 'blue', brand: PRESETS[0].brand, accent: PRESETS[0].accent, logo: '', ...store.get('theme', {}) },
   target: store.get('target', 'both'),
   outputs: { de: null, en: null },
   campaignNotes: '',
@@ -806,17 +743,12 @@ const state = {
   reviewed: false,
   published: false,
 };
-if (state.settings.rememberKey) state.settings.apiKey = store.get('apiKey', '');
 const org = () => (state.settings.orgName || '').trim() || DEFAULT_SETTINGS.orgName;
 const ctaUrl = () => (state.settings.ctaUrl || '').trim();
 const cur = () => state.outputs[state.lang];
 const hasOutputs = () => Boolean(state.outputs.de || state.outputs.en);
 const saveCampaign = debounce(() => store.set('campaign', { outputs: state.outputs, lang: state.lang, notes: state.campaignNotes }), 400);
-function saveSettings() {
-  const { apiKey, ...rest } = state.settings;
-  store.set('settings', rest);
-  if (state.settings.rememberKey) store.set('apiKey', apiKey); else store.del('apiKey');
-}
+function saveSettings() { store.set('settings', state.settings); }
 
 /* =====================================================================
    1. BRAND THEME – logo + two colors, shades derived in CSS
@@ -1130,7 +1062,7 @@ const PHRASES = {
     highlights: 'A few highlights:',
     emailThanks: 'Thank you for being part of this journey. Your trust and generosity make every step possible.',
     photo: 'Photo',
-    notice: (from) => `Simulated engine: the templates are written in English, but facts from your ${LANG_NAMES[from]} notes are quoted as written. Switch to the Claude API in Settings for a full translation.`,
+    notice: (from) => `Simulated engine: the templates are written in English, but facts from your ${LANG_NAMES[from]} notes are quoted as written. Full translation isn't available in this offline tool.`,
   },
   de: {
     titleHook: 'So wirkt Ihre Unterstützung',
@@ -1156,7 +1088,7 @@ const PHRASES = {
     highlights: 'Einige Höhepunkte:',
     emailThanks: 'Danke, dass Sie diesen Weg mit uns gehen. Ihr Vertrauen und Ihre Großzügigkeit machen jeden Schritt möglich.',
     photo: 'Foto',
-    notice: (from) => `Simulierte Engine: Die Vorlagen sind auf Deutsch, Fakten aus Ihren Notizen (${LANG_NAMES[from]}) werden jedoch unverändert übernommen. Für eine vollständige Übersetzung in den Einstellungen die Claude API aktivieren.`,
+    notice: (from) => `Simulierte Engine: Die Vorlagen sind auf Deutsch, Fakten aus Ihren Notizen (${LANG_NAMES[from]}) werden jedoch unverändert übernommen. Eine vollständige Übersetzung bietet dieses Offline-Tool nicht.`,
   },
 };
 
@@ -1167,7 +1099,7 @@ function formatQuote(q, lang) {
   return q.by ? `${text} – ${q.by}` : text;
 }
 
-/** Returns the same structured shape the Claude API produces (see CAMPAIGN_SCHEMA). */
+/** Builds the structured campaign shape that normalize() turns into editable outputs. */
 function simulateCampaign(a, lang, o, url, photoCount = 0) {
   const T = a.theme[lang];
   const P = PHRASES[lang];
@@ -1580,269 +1512,7 @@ async function restoreFiles() {
 }
 
 /* =====================================================================
-   5. CLAUDE ENGINE – official Anthropic TypeScript SDK in the browser
-   ===================================================================== */
-const SECTION_SCHEMA = {
-  type: 'object', additionalProperties: false, required: ['heading', 'paragraphs', 'bullets', 'quote'],
-  properties: {
-    heading: { type: 'string', description: 'H2 section heading' },
-    paragraphs: { type: 'array', items: { type: 'string' }, description: 'Readable paragraphs of 2-4 sentences, plain text' },
-    bullets: { type: 'array', items: { type: 'string' }, description: 'Optional bullet points (empty array if not needed)' },
-    quote: { type: 'string', description: 'A quote taken verbatim from the notes with attribution, or an empty string' },
-  },
-};
-const CAMPAIGN_SCHEMA = {
-  type: 'object', additionalProperties: false, required: ['blog', 'social', 'newsletter'],
-  properties: {
-    blog: {
-      type: 'object', additionalProperties: false, required: ['title', 'excerpt', 'intro', 'sections', 'cta'],
-      properties: {
-        title: { type: 'string' },
-        excerpt: { type: 'string', description: 'Meta description / excerpt, max 160 characters' },
-        intro: { type: 'string', description: 'Opening paragraph' },
-        sections: { type: 'array', items: SECTION_SCHEMA },
-        cta: {
-          type: 'object', additionalProperties: false, required: ['heading', 'text', 'button_text'],
-          properties: { heading: { type: 'string' }, text: { type: 'string' }, button_text: { type: 'string' } },
-        },
-      },
-    },
-    social: {
-      type: 'object', additionalProperties: false, required: ['linkedin', 'facebook', 'google_business'],
-      properties: {
-        linkedin: {
-          type: 'object', additionalProperties: false, required: ['text', 'hashtags'],
-          properties: {
-            text: { type: 'string', description: 'Post text without hashtags' },
-            hashtags: { type: 'array', items: { type: 'string' }, description: 'Exactly 3 hashtags without the # sign' },
-          },
-        },
-        facebook: { type: 'string' },
-        google_business: { type: 'string', description: 'Exactly two sentences' },
-      },
-    },
-    newsletter: {
-      type: 'object', additionalProperties: false, required: ['subject', 'preview_text', 'greeting', 'body', 'button_text', 'signoff'],
-      properties: {
-        subject: { type: 'string' },
-        preview_text: { type: 'string' },
-        greeting: { type: 'string' },
-        body: { type: 'array', items: { type: 'string' }, description: 'Email body paragraphs' },
-        button_text: { type: 'string' },
-        signoff: { type: 'string', description: 'Closing line and sender, may contain a line break' },
-      },
-    },
-  },
-};
-function mediaSchema(langs) {
-  const perLang = (description) => ({
-    type: 'object', additionalProperties: false, required: langs, description,
-    properties: Object.fromEntries(langs.map((l) => [l, { type: 'string' }])),
-  });
-  return {
-    type: 'object', additionalProperties: false, required: ['featured_index', 'images'],
-    properties: {
-      featured_index: { type: 'integer', description: 'Number of the photo that works best as the featured image' },
-      images: {
-        type: 'array',
-        items: {
-          type: 'object', additionalProperties: false, required: ['index', 'alt_text', 'caption'],
-          properties: {
-            index: { type: 'integer', description: 'The photo number as labeled' },
-            alt_text: perLang('Factual alt text, max 125 characters, describing only what is visible'),
-            caption: perLang('Short caption for the blog gallery, or an empty string'),
-          },
-        },
-      },
-    },
-  };
-}
-function schemaFor(langs, withMedia = false) {
-  const properties = Object.fromEntries(langs.map((l) => [l, CAMPAIGN_SCHEMA]));
-  const required = [...langs];
-  if (withMedia) { properties.media = mediaSchema(langs); required.push('media'); }
-  return { type: 'object', additionalProperties: false, required, properties };
-}
-
-function systemPrompt(o, url) {
-  return `You are the communications writer for the ${o}, a non-profit foundation. You turn raw notes, bullet points, meeting transcripts, documents and photos into a ready-to-publish content campaign for the foundation's website, social channels and newsletter.
-
-Facts
-- Use only facts contained in the notes and attached documents. Never invent numbers, names, dates, places, quotes or outcomes. If a detail is missing, write around it.
-- Photos are labeled "Photo 0", "Photo 1" and so on. Describe only what is visible. Never guess the names or identities of people in photos.
-- Protect the dignity and privacy of the children and families you write about: no pity language, no identifying details about minors beyond what the notes state.
-- Tone: warm, hopeful, credible and impact-focused. Show what support made possible and invite readers to take part.
-
-Channels
-- WordPress blog post: an engaging, SEO-friendly title (max ~65 characters), an excerpt of max 160 characters, an opening paragraph, then 3-5 sections with H2 headings and short, readable paragraphs (2-4 sentences). Use bullets only where they help (e.g. figures). Use "quote" only for a quote that appears in the notes or documents. End with a call to action (heading, one or two sentences, short button text).
-- LinkedIn: professional and impact-focused, 120-220 words, short paragraphs separated by blank lines, ends with a call to action. Put exactly 3 relevant hashtags in "hashtags" (without the # sign) and none in the text.
-- Facebook: warm, personal and community-oriented, 60-140 words, a few emoji are fine, thank the community and invite people to share or comment. If photos are attached, you may refer to them.
-- Google Business Profile update: exactly 2 sentences, max 300 characters, no hashtags, no emoji.
-- Mailchimp newsletter: a catchy subject line (max 50 characters, one emoji allowed), preview text of 40-90 characters that complements rather than repeats the subject, a greeting, 3-5 short body paragraphs, button text of 2-4 words, and a sign-off from the foundation's team (use a line break between the closing phrase and the sender).
-- Photos (when attached): alt text and an optional short caption for every photo, and the number of the photo best suited as the featured image.
-
-Languages
-- German ("de"): natural, idiomatic German. Address readers formally with "Sie" in the blog, LinkedIn, Google and newsletter; Facebook may use the informal plural "ihr". Use typographic quotes („…“).
-- English ("en"): natural, idiomatic English.
-- When several languages are requested, write equivalent localized versions with the same facts and structure. Do not translate word for word.
-
-Links
-- Donation / call-to-action link: ${url ? url : 'none provided. Do not include any URLs.'}
-${url ? '- You may mention the link once in LinkedIn, Facebook and the Google update. Do not put it in the blog text or newsletter body; the buttons carry it.\n' : ''}
-Write plain text only: no Markdown, no HTML.`;
-}
-
-let sdkPromise = null;
-function loadSdk() {
-  sdkPromise ??= import(CDN.sdk).then((m) => m.default || m.Anthropic).catch((err) => {
-    sdkPromise = null;
-    throw new Error(`Could not load the Anthropic SDK (${err.message}). Check your internet connection.`);
-  });
-  return sdkPromise;
-}
-
-function describeApiError(err, Anthropic) {
-  if (Anthropic) {
-    if (err instanceof Anthropic.APIUserAbortError) return 'Generation cancelled.';
-    if (err instanceof Anthropic.AuthenticationError) return 'Claude API: the API key was rejected (401). Check it in Settings.';
-    if (err instanceof Anthropic.PermissionDeniedError) return 'Claude API: this key has no access to the selected model (403).';
-    if (err instanceof Anthropic.NotFoundError) return 'Claude API: model or endpoint not found (404). Check the model and base URL in Settings.';
-    if (err instanceof Anthropic.RateLimitError) return 'Claude API: rate limit reached (429). Wait a moment and try again.';
-    if (err instanceof Anthropic.BadRequestError) return `Claude API rejected the request (400): ${err.message}`;
-    if (err instanceof Anthropic.APIConnectionError) return 'Could not reach the Claude API. Check your connection, or the base URL in Settings.';
-    if (err instanceof Anthropic.APIError) return `Claude API error${err.status ? ` ${err.status}` : ''}: ${err.message}`;
-  }
-  return err?.message || String(err);
-}
-
-/**
- * Streams one structured-output request and returns the parsed JSON.
- * onText receives the accumulated JSON text so the pipeline can show progress.
- */
-async function claudeRequest(userContent, langs, onText, withMedia = false) {
-  const s = state.settings;
-  if (!s.apiKey && !s.baseURL) throw new Error('Add your Anthropic API key in Settings (or an API base URL for your proxy).');
-  const Anthropic = await loadSdk();
-  const client = new Anthropic({
-    apiKey: s.apiKey || 'set-by-proxy',
-    baseURL: s.baseURL || undefined,
-    dangerouslyAllowBrowser: true, // the key is entered by the user of this page; see the note in Settings
-  });
-  const params = {
-    model: s.model,
-    max_tokens: 64000,
-    thinking: { type: 'adaptive' },
-    output_config: { effort: s.effort, format: { type: 'json_schema', schema: schemaFor(langs, withMedia) } },
-    system: systemPrompt(org(), ctaUrl()),
-    messages: [{ role: 'user', content: userContent }],
-  };
-  if (s.model === 'claude-opus-5') {
-    // Server-side fallback: if a safety classifier declines, the API retries on Anthropic's recommended model.
-    params.betas = ['server-side-fallback-2026-07-01'];
-    params.fallbacks = 'default';
-  }
-  try {
-    const stream = client.beta.messages.stream(params);
-    state.abort = () => stream.abort();
-    stream.on('text', (_delta, snapshot) => onText?.(snapshot));
-    const message = await stream.finalMessage();
-    if (message.stop_reason === 'refusal') {
-      const why = message.stop_details?.explanation;
-      throw new Error(`Claude declined to write this campaign${why ? `: ${why}` : '.'} Try rephrasing the notes.`);
-    }
-    if (message.stop_reason === 'max_tokens') throw new Error('The response was cut off (max_tokens). Try shorter notes or a single language.');
-    const text = message.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error('Claude returned an unexpected format. Please try again.'); }
-    for (const l of langs) if (!data?.[l]?.blog || !data[l].social || !data[l].newsletter) throw new Error(`The ${LANG_NAMES[l]} version is incomplete. Please try again.`);
-    return { data, usage: message.usage, model: message.model };
-  } catch (err) {
-    throw new Error(describeApiError(err, Anthropic));
-  } finally {
-    state.abort = null;
-  }
-}
-
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(',')[1] || '');
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(blob);
-  });
-}
-/** Downscales a photo to the size Claude works best with (long edge 1568 px) and returns JPEG base64. */
-async function imageForApi(f) {
-  const img = await loadImage(urlFor(f));
-  const scale = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight, 1));
-  const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.round((img.naturalWidth || 800) * scale));
-  c.height = Math.max(1, Math.round((img.naturalHeight || 600) * scale));
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(img, 0, 0, c.width, c.height);
-  const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
-  return { media_type: 'image/jpeg', data: await blobToBase64(blob) };
-}
-
-/** Builds the content blocks for the selected files: photos, PDFs (native) and extracted text. */
-async function attachmentBlocks() {
-  const files = selectedFiles();
-  const blocks = [];
-  const photos = [];
-  const docs = [];
-  const other = [];
-  let budget = 22 * 1024 * 1024; // stay well below the 32 MB request limit
-  for (const f of files) {
-    if (f.kind === 'image' && photos.length < MAX_API_IMAGES) {
-      try {
-        const { data, media_type } = await imageForApi(f);
-        if (data.length > budget) { other.push(f.name); continue; }
-        budget -= data.length;
-        blocks.push({ type: 'text', text: `Photo ${photos.length}: ${f.name}` }, { type: 'image', source: { type: 'base64', media_type, data } });
-        photos.push(f);
-      } catch { other.push(f.name); }
-    } else if (f.kind === 'pdf' && f.size < 20 * 1024 * 1024) {
-      const data = await blobToBase64(f.blob);
-      if (data.length <= budget) {
-        budget -= data.length;
-        blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data }, title: f.name });
-        docs.push(f);
-      } else if (f.text) { blocks.push(textDocument(f)); docs.push(f); }
-      else other.push(f.name);
-    } else if (f.text) {
-      const doc = textDocument(f);
-      budget -= doc.source.data.length;
-      blocks.push(doc);
-      docs.push(f);
-    } else {
-      other.push(f.name);
-    }
-  }
-  return { blocks, photos, docs, other };
-}
-const textDocument = (f) => ({ type: 'document', source: { type: 'text', media_type: 'text/plain', data: f.text.slice(0, 120000) }, title: f.name });
-
-/** Stores Claude's alt text, captions and featured-photo pick on the attached photos. */
-function applyMedia(media, photos, langs) {
-  if (!media || !photos.length) return;
-  for (const m of media.images || []) {
-    const f = photos[m.index];
-    if (!f) continue;
-    for (const l of langs) {
-      if (m.alt_text?.[l]) f.alt = { ...f.alt, [l]: m.alt_text[l] };
-      if (typeof m.caption?.[l] === 'string') f.caption = { ...f.caption, [l]: m.caption[l] };
-    }
-    persistFileSoon(f);
-  }
-  const pick = photos[media.featured_index];
-  const current = getFeatured();
-  if (pick && (!current || current.featuredBy !== 'user')) setFeatured(pick, 'auto');
-}
-
-/* =====================================================================
-   6. NORMALIZATION – structured campaign → editable outputs
+   5. NORMALIZATION – structured campaign → editable outputs
    ===================================================================== */
 function blogHtml(b, url) {
   let h = b.intro ? `<p class="pw-lead">${esc(b.intro)}</p>` : '';
@@ -2238,7 +1908,6 @@ function setBusy(busy, label = 'Generating…') {
   $('#generate-label').textContent = busy ? label : 'Generate Campaign';
   $('#generate-icon').innerHTML = busy ? spinner('size-5') : icon('sparkles', 'size-5');
   $('#generate-shine').hidden = !busy;
-  $('#cancel-run').hidden = !(busy && state.settings.engine === 'claude');
   $$('#lang-toggle .lang-btn').forEach((b) => { b.disabled = busy || !hasOutputs(); });
   updateExportLabel();
 }
@@ -2271,7 +1940,7 @@ async function runSimulated(notes, langs) {
   pipe.set('analyze', 'running', 'Reading notes…');
   await sleep(420);
   const source = [notes, documentText(files)].filter(Boolean).join('\n');
-  if (words(source) < 5) throw new Error('The simulated engine needs some text: add notes or a document. (With the Claude API, photos alone are enough.)');
+  if (words(source) < 5) throw new Error('Add some notes or a document with text in it.');
   const a = analyzeNotes(source);
   pipe.set('analyze', 'done', `${a.points.length + a.next.length + a.thanks.length} facts · ${LANG_NAMES[a.lang]} · theme: ${a.theme.en.label}`);
   const photoCount = selectedImages().length;
@@ -2295,63 +1964,6 @@ async function runSimulated(notes, langs) {
   return Object.fromEntries(langs.map((l) => [l, normalize(result[l], { ...meta, crossLang: a.lang !== l })]));
 }
 
-/** Maps the streamed JSON text to pipeline steps. */
-function progressTracker(langs, { translationOnly = false } = {}) {
-  let started = false;
-  const seen = new Set();
-  return (snapshot) => {
-    if (!started) {
-      started = true;
-      if (!translationOnly) pipe.set('analyze', 'done', 'Notes analysed by Claude');
-      pipe.set('blog', 'running', 'Writing…');
-    }
-    const mark = (key, fn) => { if (!seen.has(key) && snapshot.includes(key)) { seen.add(key); fn(); } };
-    mark('"social"', () => { pipe.set('blog', 'done', 'Title, sections and call to action'); pipe.set('social', 'running', 'Writing…'); });
-    mark('"newsletter"', () => { pipe.set('social', 'done', 'LinkedIn · Facebook · Google Business'); pipe.set('email', 'running', 'Writing…'); });
-    if (langs.length > 1 && new RegExp(`"${langs[1]}"\\s*:`).test(snapshot) && !seen.has('second')) {
-      seen.add('second');
-      pipe.set('email', 'done', 'Subject, preview, body and button');
-      pipe.set('translate', 'running', `Writing the ${LANG_NAMES[langs[1]]} version…`);
-    }
-  };
-}
-
-async function runClaude(notes, langs) {
-  const files = selectedFiles();
-  let att = { blocks: [], photos: [], docs: [], other: [] };
-  if (files.length) {
-    pipe.set('files', 'running', `Preparing ${plural(files.length, 'file')} for Claude…`);
-    await Promise.all(files.map((f) => f.ready));
-    att = await attachmentBlocks();
-    const parts = [];
-    if (att.photos.length) parts.push(plural(att.photos.length, 'photo'));
-    if (att.docs.length) parts.push(plural(att.docs.length, 'document'));
-    if (att.other.length) parts.push(`${fmt(att.other.length)} for publishing only`);
-    pipe.set('files', 'done', parts.join(' · ') || 'Nothing readable');
-  } else pipe.set('files', 'skipped', 'No files attached');
-
-  pipe.set('analyze', 'running', `Sending to ${MODEL_LABELS[state.settings.model] || state.settings.model}…`);
-  if (langs.length === 1) pipe.set('translate', 'skipped', `Only ${LANG_NATIVE[langs[0]]} requested`);
-  const langList = langs.map((l) => `${LANG_NAMES[l]} (key "${l}")`).join(' and ');
-  const lines = [`Create the complete content campaign in ${langList}.`, `Today's date: ${new Date().toISOString().slice(0, 10)}`];
-  if (att.photos.length) lines.push(`${plural(att.photos.length, 'photo')} attached above (Photo 0 to Photo ${att.photos.length - 1}). Fill in "media" for every photo.`);
-  if (att.docs.length) lines.push(`${plural(att.docs.length, 'document')} attached above: use their facts like the notes.`);
-  if (att.other.length) lines.push(`Also attached for publishing only (not readable): ${att.other.join(', ')}.`);
-  lines.push(notes ? `<notes>\n${notes}\n</notes>` : 'No written notes were provided. Build the campaign from the attached files.');
-  const content = [...att.blocks, { type: 'text', text: lines.join('\n\n') }];
-
-  const t0 = performance.now();
-  const { data, usage, model } = await claudeRequest(content, langs, progressTracker(langs), att.photos.length > 0);
-  pipe.finishRunning('done');
-  completeContentSteps();
-  if (langs.length > 1) pipe.set('translate', 'done', 'Deutsch + English versions ready');
-  applyMedia(data.media, att.photos, langs);
-  autoFeature();
-  state.campaignNotes = notes;
-  const meta = { engine: 'claude', model, usage, seconds: (performance.now() - t0) / 1000 };
-  return Object.fromEntries(langs.map((l) => [l, normalize(data[l], meta)]));
-}
-
 async function generate() {
   if (state.busy) return;
   const notes = $('#notes').value.trim();
@@ -2366,10 +1978,10 @@ async function generate() {
   state.restored = false;
   pipe.reset();
   setRunStatus('running', 'Running');
-  $('#pipeline-sub').textContent = state.settings.engine === 'claude' ? `Claude · ${MODEL_LABELS[state.settings.model] || state.settings.model}` : 'Simulated engine';
+  $('#pipeline-sub').textContent = 'Simulated engine';
   const t0 = performance.now();
   try {
-    const out = state.settings.engine === 'claude' ? await runClaude(notes, langs) : await runSimulated(notes, langs);
+    const out = await runSimulated(notes, langs);
     state.outputs = { de: null, en: null, ...out };
     state.reviewed = false;
     if (!state.outputs[state.lang]) state.lang = langs[0];
@@ -2404,31 +2016,12 @@ async function translateTo(lang) {
   setRunStatus('running', 'Translating');
   const t0 = performance.now();
   try {
-    let output;
-    if (state.settings.engine === 'claude') {
-      pipe.set('translate', 'running', `Translating into ${LANG_NAMES[lang]}…`);
-      const photos = selectedImages().slice(0, MAX_API_IMAGES);
-      const campaign = outputsForTranslation(source);
-      if (photos.length) campaign.media = photos.map((f, index) => ({ index, alt_text: altFor(f, from), caption: captionFor(f, from) }));
-      const user = `Translate and localize this campaign into ${LANG_NAMES[lang]} (key "${lang}"). Keep the facts, structure, links and intent identical, follow the channel rules, and write natural ${LANG_NAMES[lang]} rather than a literal translation. The blog body is given as Markdown; return it in the schema's structure.${photos.length ? ' Translate the photo alt texts and captions in "media" too, keeping each index.' : ''}
-
-<campaign lang="${from}">
-${JSON.stringify(campaign, null, 2)}
-</campaign>`;
-      const { data, usage, model } = await claudeRequest(user, [lang], progressTracker([lang], { translationOnly: true }), photos.length > 0);
-      pipe.finishRunning('done');
-      completeContentSteps();
-      pipe.set('translate', 'done', `${LANG_NATIVE[lang]} version ready`);
-      if (data.media) { const keep = getFeatured(); applyMedia({ ...data.media, featured_index: -1 }, photos, [lang]); if (keep) setFeatured(keep, keep.featuredBy || 'auto'); }
-      output = normalize(data[lang], { engine: 'claude', model, usage, seconds: (performance.now() - t0) / 1000 });
-    } else {
-      pipe.set('translate', 'running', `Building the ${LANG_NAMES[lang]} version…`);
-      await sleep(500);
-      const a = analyzeNotes(state.campaignNotes);
-      output = normalize(simulateCampaign(a, lang, org(), ctaUrl(), selectedImages().length), { engine: 'simulated', sourceLang: a.lang, crossLang: a.lang !== lang });
-      ['blog', 'social', 'email'].forEach((id) => pipe.set(id, 'done'));
-      pipe.set('translate', 'done', `${LANG_NATIVE[lang]} version ready`);
-    }
+    pipe.set('translate', 'running', `Building the ${LANG_NAMES[lang]} version…`);
+    await sleep(500);
+    const a = analyzeNotes(state.campaignNotes);
+    const output = normalize(simulateCampaign(a, lang, org(), ctaUrl(), selectedImages().length), { engine: 'simulated', sourceLang: a.lang, crossLang: a.lang !== lang });
+    ['blog', 'social', 'email'].forEach((id) => pipe.set(id, 'done'));
+    pipe.set('translate', 'done', `${LANG_NATIVE[lang]} version ready`);
     state.outputs[lang] = output;
     state.lang = lang;
     saveCampaign();
@@ -2450,7 +2043,7 @@ function updateRunMeta(ms) {
   const o = cur();
   if (!o) return;
   const when = new Date(o.meta.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-  const parts = [o.meta.engine === 'claude' ? `Claude · ${o.meta.model || ''}` : 'Simulated engine', when];
+  const parts = ['Simulated engine', when];
   if (ms) parts.push(`${(ms / 1000).toFixed(1)} s`);
   if (o.meta.usage) parts.push(`${fmt(o.meta.usage.input_tokens)} in / ${fmt(o.meta.usage.output_tokens)} out tokens`);
   if (state.restored) parts.unshift('Restored from your last session');
@@ -3110,26 +2703,13 @@ async function wpCurl() {
    13. SETTINGS + HEADER STATUS
    ===================================================================== */
 function updateEngineHint() {
-  const s = state.settings;
-  const claude = s.engine === 'claude';
-  const ready = !claude || Boolean(s.apiKey || s.baseURL);
   const nFiles = selectedFiles().length;
   const files = nFiles ? ` with your notes and ${plural(nFiles, 'file')}` : '';
-  $('#engine-hint').innerHTML = !claude
-    ? `Using the offline <strong class="font-medium text-slate-700">simulated engine</strong>${files}. <button type="button" class="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-900" data-open-settings>Connect the Claude API</button> for AI writing, photo descriptions and translation.`
-    : ready
-      ? `Writing with <strong class="font-medium text-slate-700">${esc(MODEL_LABELS[s.model] || s.model)}</strong>${files}. <button type="button" class="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-900" data-open-settings>Change</button>`
-      : '<span class="text-red-600">Claude API selected, but no API key is set.</span> <button type="button" class="font-medium text-brand-700 underline underline-offset-2" data-open-settings>Add key</button>';
+  $('#engine-hint').innerHTML = `Works fully offline${files} – no account or internet connection needed to generate a campaign.`;
 }
 
 function renderEngineStatus() {
-  const s = state.settings;
-  const claude = s.engine === 'claude';
-  const ready = !claude || Boolean(s.apiKey || s.baseURL);
-  $('#engine-dot').className = `dot ${!claude ? 'bg-amber-400' : ready ? 'bg-emerald-500' : 'bg-red-500'}`;
-  $('#engine-label').textContent = !claude ? 'Simulated engine' : ready ? `Claude · ${(MODEL_LABELS[s.model] || s.model).replace('Claude ', '')}` : 'Claude · key missing';
   updateEngineHint();
-  $('#claude-settings').hidden = !claude;
   $$('[data-org-name]').forEach((el) => { el.textContent = org(); });
 }
 
@@ -3183,24 +2763,12 @@ async function useLogo(file) {
 function initSettings() {
   const s = state.settings;
   const dlg = $('#settings-dialog');
-  $$('input[name="engine"]').forEach((r) => { r.checked = r.value === s.engine; });
-  $('#api-key').value = s.apiKey;
-  $('#remember-key').checked = s.rememberKey;
-  $('#model').value = s.model;
-  $('#effort').value = s.effort;
-  $('#base-url').value = s.baseURL;
   $('#org-name').value = s.orgName;
   $('#cta-url').value = s.ctaUrl;
   renderThemeControls();
 
   const apply = (ev) => {
     if (ev?.target?.closest('#theme-presets, #logo-input') || ['brand-color', 'accent-color', 'brand-hex', 'accent-hex'].includes(ev?.target?.id)) return;
-    s.engine = $('input[name="engine"]:checked')?.value || 'simulated';
-    s.apiKey = $('#api-key').value.trim();
-    s.rememberKey = $('#remember-key').checked;
-    s.model = $('#model').value;
-    s.effort = $('#effort').value;
-    s.baseURL = $('#base-url').value.trim().replace(/\/+$/, '');
     s.orgName = $('#org-name').value.trim() || DEFAULT_SETTINGS.orgName;
     s.ctaUrl = $('#cta-url').value.trim();
     saveSettings();
