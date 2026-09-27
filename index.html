@@ -866,7 +866,7 @@ function applyTheme() {
     el.classList.toggle('bg-white', Boolean(t.logo));
     el.classList.toggle('p-1', Boolean(t.logo));
   });
-  const fav = t.logo || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${t.brand}"/><g transform="translate(16,16)" fill="${t.accent}"><circle r="4.5"/><g>${Array.from({ length: 8 }, (_, i) => `<rect x="-1.6" y="-11" width="3.2" height="5.5" rx="1" transform="rotate(${i * 45})"/>`).join('')}</g></g></svg>`)}`;
+  const fav = t.logo || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${t.brand}"/><g transform="translate(4,4) scale(1.05)" fill="none" stroke="${t.accent}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ICONS.settings}</g></svg>`)}`;
   $('#favicon').href = fav;
   store.set('theme', t);
 }
