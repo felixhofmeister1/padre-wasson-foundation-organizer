@@ -864,14 +864,14 @@ function applyTheme() {
   root.setProperty('--on-brand', onColor(t.brand));
   root.setProperty('--on-accent', onColor(t.accent));
   $('meta[name="theme-color"]').content = t.brand;
-  const mark = `<svg viewBox="0 0 24 24" class="size-5" aria-hidden="true"><path fill="${t.accent}" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+  const mark = `<svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="${t.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS.settings}</svg>`;
   $$('[data-logo]').forEach((el) => {
     el.innerHTML = t.logo ? `<img src="${t.logo}" alt="" class="size-full object-contain">` : mark;
     el.classList.toggle('bg-brand-700', !t.logo);
     el.classList.toggle('bg-white', Boolean(t.logo));
     el.classList.toggle('p-1', Boolean(t.logo));
   });
-  const fav = t.logo || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${t.brand}"/><path d="M22.5 17.5c1.6-1.6 3-3.4 3-5.8a5 5 0 0 0-5-5c-1.8 0-3 .6-4.5 2.1-1.5-1.5-2.7-2.1-4.5-2.1a5 5 0 0 0-5 5c0 2.4 1.4 4.2 3 5.8L16 24z" fill="${t.accent}"/></svg>`)}`;
+  const fav = t.logo || `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${t.brand}"/><g transform="translate(16,16)" fill="${t.accent}"><circle r="4.5"/><g>${Array.from({ length: 8 }, (_, i) => `<rect x="-1.6" y="-11" width="3.2" height="5.5" rx="1" transform="rotate(${i * 45})"/>`).join('')}</g></g></svg>`)}`;
   $('#favicon').href = fav;
   store.set('theme', t);
 }
