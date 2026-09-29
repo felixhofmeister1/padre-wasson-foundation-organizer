@@ -34,7 +34,7 @@ export async function POST(request) {
 
   // Every limit below applies to all addresses alike, so its answers reveal nothing about the list.
   const emailKey = await hmacHex(cfg.secret, 'rate', email);
-  if (await recall(`cool:${emailKey}`)) {
+  if ((await recall(`cool:${emailKey}`)) === 1) {
     await padTo(started, 300);
     return json(429, { error: 'cooldown', retryIn: RESEND_COOLDOWN_S });
   }
@@ -59,6 +59,7 @@ export async function POST(request) {
       console.log(`[auth] code sent to ${maskEmail(email)} (${client.country || '??'})`);
     } catch (err) {
       console.error(`[auth] could not send the code to ${maskEmail(email)}:`, err?.message || err);
+      await remember(`cool:${emailKey}`, 0, 1); // let the person try again right away
       await padTo(started, MIN_RESPONSE_MS);
       return json(502, { error: 'send_failed' });
     }
