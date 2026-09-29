@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="same-origin">
+<meta name="theme-color" content="#1e3a8a">
+<title>Sign in · Padre Wasson Foundation Organizer</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<link rel="stylesheet" href="/auth/login.css">
+<script type="module" src="/auth/login.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="card" aria-labelledby="title">
+    <header class="brand">
+      <span class="mark" id="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+      </span>
+      <div class="brand-text">
+        <p class="org">Padre Wasson Foundation</p>
+        <p class="app">Organizer</p>
+      </div>
+      <div class="lang" role="group" aria-label="Language / Sprache">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="de" aria-pressed="false">DE</button>
+      </div>
+    </header>
+
+    <p class="notice" id="notice" role="status" hidden></p>
+
+    <form id="email-step" class="step" novalidate>
+      <h1 id="title" data-t="signInTitle">Sign in</h1>
+      <p class="lead" data-t="signInLead">Enter your email address and we'll send you a one-time code.</p>
+      <label for="email" data-t="emailLabel">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="254" required aria-describedby="email-error">
+      <p class="error" id="email-error" role="alert" hidden></p>
+      <button type="submit" class="primary" id="email-submit">
+        <span class="spinner" aria-hidden="true"></span><span data-t="sendCode">Send code</span>
+      </button>
+    </form>
+
+    <form id="code-step" class="step" novalidate hidden>
+      <h1 data-t="codeTitle">Check your email</h1>
+      <p class="lead"><span data-t="codeLeadBefore">If</span> <strong id="sent-to" class="addr"></strong> <span data-t="codeLeadAfter">may use the Organizer, a code is on its way. It is valid for 10 minutes.</span></p>
+      <label for="code" data-t="codeLabel">8-character code</label>
+      <input id="code" name="code" class="code-input" autocomplete="one-time-code" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="14" placeholder="XXXX-XXXX" aria-describedby="code-error code-help">
+      <p class="error" id="code-error" role="alert" hidden></p>
+      <button type="submit" class="primary" id="code-submit">
+        <span class="spinner" aria-hidden="true"></span><span data-t="signIn">Sign in</span>
+      </button>
+      <div class="links">
+        <button type="button" class="link" id="resend"></button>
+        <button type="button" class="link" id="change-email" data-t="otherEmail">Use a different email</button>
+      </div>
+      <p class="help" id="code-help" data-t="codeHelp">No email? Check your spam folder. Only approved addresses receive a code.</p>
+    </form>
+
+    <footer class="foot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <p data-t="safety">Protected area. We will never ask for your code by phone, chat or email, and we never send sign-in links.</p>
+    </footer>
+  </section>
+</main>
+</body>
+</html>

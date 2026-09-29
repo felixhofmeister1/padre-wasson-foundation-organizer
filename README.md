@@ -16,7 +16,34 @@ Every output can be edited inline and copied.
 
 ## Running it
 
-Open `index.html` in a browser, or serve the folder with any static web server. There is no build step, no account and no internet connection needed to generate a campaign. Tailwind CSS, fonts, and the PDF/Word readers load from CDNs when a file needs them.
+On Vercel the whole site sits behind an email sign-in (see below). Locally you can open `index.html` in a browser or serve the folder with any static web server; generating a campaign needs no account and no internet connection. Tailwind CSS, the fonts and the PDF/Word readers are served from `vendor/` on the same site (when opened as a local file, the PDF/Word readers fall back to a CDN).
+
+## Sign-in (email code)
+
+Only approved email addresses can open the Organizer:
+
+1. Enter your email address on the sign-in page.
+2. If the address is approved, you get an 8-character code by email (e.g. `K7PQ-M2XD`). It is valid for 10 minutes and only works in the browser that asked for it.
+3. Type the code and you are in for 12 hours. The account menu (person icon, top right) shows who is signed in and has **Sign out** and **Sign out and remove my data from this device** (for shared computers).
+
+Every page, script and API is locked until then. Only the sign-in page and the open-source libraries in `vendor/` load without signing in. See [SECURITY.md](SECURITY.md) for how it is protected.
+
+### Setting it up on Vercel
+
+Add these under **Project → Settings → Environment Variables**, mark the secrets as *Sensitive*, then redeploy:
+
+| Variable | What it is |
+| --- | --- |
+| `AUTH_SECRET` | Random secret, at least 32 characters (`openssl rand -base64 48`). Signs codes and sessions. Changing it signs everyone out. |
+| `ALLOWED_EMAILS` | Who may sign in, comma-separated. `@example.org` allows a whole domain. Removing an address locks it out immediately. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | A mailbox that sends the codes. Gmail: `smtp.gmail.com`, `465`, your address, an [app password](https://myaccount.google.com/apppasswords) (needs 2-Step Verification). IONOS: `smtp.ionos.de`, `465`. Port 587 uses STARTTLS; mail is never sent without encryption. |
+| `RESEND_API_KEY` | Alternative to SMTP: a [Resend](https://resend.com) key (needs a verified sending domain). |
+| `MAIL_FROM` | Sender address. Optional with SMTP (defaults to `SMTP_USER`), required with Resend. |
+| `SESSION_HOURS` | Optional. How long a sign-in lasts (default 12, max 168). |
+| `SESSION_VERSION` | Optional. Change the value (e.g. `1` → `2`) to sign everyone out at once. |
+| `APP_URL` | Optional. The address shown in the email (defaults to the address the request came to). |
+
+Without `AUTH_SECRET` the site stays locked. Without a way to send email, the sign-in page says sign-in is not set up yet.
 
 ## Photos & files
 
@@ -53,4 +80,15 @@ The site must use HTTPS, and the user needs at least the Author role. If a secur
 
 ## Data storage
 
-Notes, files, generated outputs and settings are saved in this browser only (`localStorage` and IndexedDB). **Settings → Clear saved data** removes them.
+Notes, files, generated outputs and settings are saved in this browser only (`localStorage` and IndexedDB), never on the server. **Settings → Clear saved data** or **Sign out and remove my data from this device** removes them.
+
+## Development
+
+```bash
+npm install
+npm test            # sign-in, session and middleware tests
+npm run build       # checks the Content-Security-Policy, copies the public files to public/
+npm run csp         # after editing the <script> in index.html: updates its hash in vercel.json
+```
+
+The page's inline script is allowed by its SHA-256 hash in `vercel.json`. If it changes without `npm run csp`, the Vercel build fails and the previous version stays online.

@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Padre Wasson Foundation Organizer</title>
 <meta name="description" content="Turn notes, photos and documents into a bilingual WordPress blog post, social captions and a Mailchimp newsletter, then upload everything to WordPress in one go.">
-<meta name="theme-color" content="#1f5d58">
-<link rel="icon" id="favicon" href="data:,">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<meta name="theme-color" content="#1e3a8a">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="same-origin">
+<link rel="icon" id="favicon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
+<script src="vendor/tailwindcss-browser-4.3.3.js"></script>
 <style>
   /* ---------- Brand theme: two base colors, every shade derived from them (changeable in Settings) ---------- */
   :root {
@@ -92,6 +92,7 @@
     .tab[aria-selected="true"] .count { @apply bg-brand-100 text-brand-800; }
     .seg { @apply grid gap-1 rounded-xl bg-slate-100 p-1; }
     .seg-item { @apply block cursor-pointer rounded-lg px-3 py-2 text-center text-sm font-medium text-slate-600 transition hover:text-slate-900 peer-checked:bg-white peer-checked:text-brand-800 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40; }
+    .menu-item { @apply flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-brand-50 hover:text-brand-800 focus-visible:bg-brand-50 focus-visible:outline-none; }
     .lang-btn { @apply rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-500 transition hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-40; }
     .lang-btn[aria-pressed="true"] { @apply bg-white text-brand-800 shadow-sm; }
     .meta { @apply text-xs text-slate-500 tabular-nums; }
@@ -206,6 +207,19 @@
       <span id="wp-pill" class="pill hidden lg:inline-flex" title="WordPress connection">
         <span class="dot" id="wp-dot"></span><span id="wp-label">WordPress · not connected</span>
       </span>
+      <div id="account" class="relative" hidden>
+        <button type="button" id="account-btn" class="btn-icon" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account" title="Account"><i data-icon="user" class="size-5"></i></button>
+        <div id="account-menu" role="menu" aria-label="Account" class="absolute right-0 top-11 z-40 w-[min(18rem,calc(100vw-2rem))] rounded-2xl bg-white p-1.5 shadow-xl ring-1 ring-slate-900/10" hidden>
+          <div class="px-3 pb-2 pt-1.5">
+            <p class="text-xs text-slate-500">Signed in as</p>
+            <p id="account-email" class="truncate text-sm font-semibold text-slate-900" data-no-i18n></p>
+            <p id="account-until" class="mt-0.5 text-xs text-slate-500"></p>
+          </div>
+          <div class="mx-2 mb-1 h-px bg-slate-100"></div>
+          <button type="button" role="menuitem" id="sign-out" class="menu-item"><i data-icon="logout" class="size-4 shrink-0"></i><span>Sign out</span></button>
+          <button type="button" role="menuitem" id="sign-out-wipe" class="menu-item"><i data-icon="trash" class="size-4 shrink-0"></i><span>Sign out and remove my data from this device</span></button>
+        </div>
+      </div>
       <button type="button" class="btn-icon" data-open-settings aria-label="Settings"><i data-icon="settings" class="size-5"></i></button>
     </div>
   </div>
@@ -562,10 +576,13 @@
    in, localized templates filled in, no external AI calls.
    ===================================================================== */
 
-const CDN = {
-  pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs',
-  pdfWorker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs',
-  mammoth: 'https://cdn.jsdelivr.net/npm/mammoth@1.12.3/mammoth.browser.min.js',
+/* PDF and Word readers are served from this site (vendor/). The CDN is only used when index.html is opened as a local file. */
+const LOCAL_FILE = location.protocol === 'file:';
+const lib = (local, cdn) => (LOCAL_FILE ? cdn : new URL(local, location.href).href);
+const LIBS = {
+  pdfjs: lib('vendor/pdf-4.10.38.min.mjs', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs'),
+  pdfWorker: lib('vendor/pdf.worker-4.10.38.min.mjs', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'),
+  mammoth: lib('vendor/mammoth-1.12.3.browser.min.js', 'https://cdn.jsdelivr.net/npm/mammoth@1.12.3/mammoth.browser.min.js'),
 };
 const LANG_NAMES = { de: 'German', en: 'English' };
 const LANG_NATIVE = { de: 'Deutsch', en: 'English' };
@@ -647,6 +664,8 @@ const ICONS = {
   globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
   minus: '<path d="M5 12h14"/>',
   reset: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
@@ -1199,7 +1218,7 @@ const extOf = (name) => (name.match(/\.([a-z0-9]{1,5})$/i)?.[1] || KIND_LABEL.ot
 
 let pdfjsPromise = null;
 function loadPdfjs() {
-  pdfjsPromise ??= import(CDN.pdfjs).then((m) => { m.GlobalWorkerOptions.workerSrc = CDN.pdfWorker; return m; })
+  pdfjsPromise ??= import(LIBS.pdfjs).then((m) => { m.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker; return m; })
     .catch((e) => { pdfjsPromise = null; throw new Error(`Could not load the PDF reader (${e.message}).`); });
   return pdfjsPromise;
 }
@@ -1208,7 +1227,7 @@ function loadMammoth() {
   mammothPromise ??= new Promise((resolve, reject) => {
     if (window.mammoth) { resolve(window.mammoth); return; }
     const s = document.createElement('script');
-    s.src = CDN.mammoth;
+    s.src = LIBS.mammoth;
     s.onload = () => resolve(window.mammoth);
     s.onerror = () => { mammothPromise = null; reject(new Error('Could not load the Word reader.')); };
     document.head.append(s);
@@ -1229,7 +1248,7 @@ async function extractText(f) {
   }
   if (f.kind === 'pdf') {
     const pdfjs = await loadPdfjs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await f.blob.arrayBuffer()) }).promise;
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await f.blob.arrayBuffer()), isEvalSupported: false }).promise;
     const pages = [];
     for (let i = 1; i <= Math.min(doc.numPages, 50); i++) {
       const tc = await (await doc.getPage(i)).getTextContent();
@@ -3212,6 +3231,13 @@ const UI_DE = {
   'Clear saved notes, files, generated outputs and settings from this browser?': 'Gespeicherte Notizen, Dateien, Ergebnisse und Einstellungen aus diesem Browser löschen?',
   'Reset everything? Your notes, files, generated texts and WordPress details will be removed. Your colors, logo, organization details and language stay.': 'Alles zurücksetzen? Notizen, Dateien, erstellte Texte und WordPress-Angaben werden entfernt. Farben, Logo, Angaben zur Organisation und Sprache bleiben erhalten.',
   'Everything has been reset.': 'Alles wurde zurückgesetzt.',
+  'Account': 'Konto',
+  'Signed in as': 'Angemeldet als',
+  'Sign out': 'Abmelden',
+  'Sign out and remove my data from this device': 'Abmelden und meine Daten von diesem Gerät entfernen',
+  'Sign out and remove your notes, files, generated texts and WordPress details from this browser? Colors, logo and organization details stay.': 'Abmelden und Notizen, Dateien, erstellte Texte und WordPress-Angaben aus diesem Browser entfernen? Farben, Logo und Angaben zur Organisation bleiben erhalten.',
+  'You will be signed out in 5 minutes. Your work stays saved in this browser.': 'Sie werden in 5 Minuten abgemeldet. Ihre Arbeit bleibt in diesem Browser gespeichert.',
+  'Could not sign out: no connection. Please try again.': 'Abmelden nicht möglich: keine Verbindung. Bitte versuchen Sie es noch einmal.',
 };
 const THEME_DE = Object.fromEntries(Object.values(THEMES).map((t) => [t.en.label, t.de.label]));
 const COPY_LABEL_DE = { 'Post title': 'Beitragstitel', 'Excerpt': 'Auszug', 'Blog post': 'Blogartikel', 'Blog HTML': 'Blog-HTML', 'Gutenberg block markup': 'Gutenberg-Block-Code', 'LinkedIn caption': 'LinkedIn-Text', 'Facebook caption': 'Facebook-Text', 'Google Business update': 'Google-Business-Update', 'Subject line': 'Betreffzeile', 'Preview text': 'Vorschautext', 'Email body': 'E-Mail-Text', 'Button text': 'Button-Text', 'Email HTML': 'E-Mail-HTML' };
@@ -3237,6 +3263,7 @@ function deUnits(s) {
 }
 const langDe = (x) => ({ German: 'Deutsch', English: 'Englisch', Deutsch: 'Deutsch' }[x] || x);
 const UI_DE_PATTERNS = [
+  [/^Signed in until (.+)$/, (m, t) => `Angemeldet bis ${t}`],
   [/^Good (morning|afternoon|evening) · (.+)$/, (m, t, d) => `${{ morning: 'Guten Morgen', afternoon: 'Guten Tag', evening: 'Guten Abend' }[t]} · ${d}`],
   [/^([\d,.]+) words · ([\d,.]+) characters$/, '$1 Wörter · $2 Zeichen'],
   [/^([\d,.]+) words · ([\d,.]+) \/ 3,000$/, '$1 Wörter · $2 / 3.000'],
@@ -3369,12 +3396,110 @@ function initI18n() {
 async function resetAll() {
   if (state.busy || state.exporting) return;
   if (!confirm(tr('Reset everything? Your notes, files, generated texts and WordPress details will be removed. Your colors, logo, organization details and language stay.'))) return;
+  await wipeWork();
+  store.set('justReset', true);
+  location.reload();
+}
+
+/** Removes notes, files, outputs and WordPress details from this browser; keeps colors, logo, organization and language. */
+async function wipeWork() {
   const keep = { theme: store.get('theme', null), settings: store.get('settings', null), uiLang: store.get('uiLang', null) };
   store.clear();
   await idb.clear().catch(() => {});
   for (const [k, v] of Object.entries(keep)) if (v != null) store.set(k, v);
-  store.set('justReset', true);
-  location.reload();
+}
+
+/* ---------------------------------------------------------------------
+   16. SIGN-IN SESSION
+   Only active when the site runs behind the email-code sign-in (Vercel):
+   shows the account menu, signs out, and returns to the sign-in page
+   when the session ends. Opened as a local file or on a plain static
+   host, /api/auth/session does not exist and nothing here happens.
+   --------------------------------------------------------------------- */
+const auth = { email: '', expiresAt: 0, timer: 0, lastCheck: 0 };
+const authChannel = 'BroadcastChannel' in window ? new BroadcastChannel('pwo-auth') : null;
+
+function toLogin(query) {
+  // Never interrupt a running WordPress export; it talks to WordPress directly and does not need the session.
+  if (state.exporting) { setTimeout(() => toLogin(query), 5000); return; }
+  location.replace('/login?' + query);
+}
+
+async function checkSession() {
+  if (LOCAL_FILE) return;
+  auth.lastCheck = Date.now();
+  let res;
+  try {
+    res = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+  } catch {
+    return; // offline: keep working, check again later
+  }
+  if (!(res.headers.get('content-type') || '').includes('application/json')) return; // no sign-in on this host
+  if (res.status === 401) { toLogin('expired=1'); return; }
+  if (!res.ok) return;
+  const data = await res.json().catch(() => null);
+  if (!data || typeof data.email !== 'string') return;
+  auth.email = data.email;
+  auth.expiresAt = Number(data.expiresAt) * 1000;
+  renderAccount();
+  scheduleSessionEnd();
+}
+
+function renderAccount() {
+  $('#account').hidden = false;
+  $('#account-email').textContent = auth.email;
+  const until = new Intl.DateTimeFormat(i18n.lang === 'de' ? 'de-DE' : 'en-GB', { hour: '2-digit', minute: '2-digit' }).format(new Date(auth.expiresAt));
+  $('#account-until').textContent = `Signed in until ${until}`;
+}
+
+function scheduleSessionEnd() {
+  clearTimeout(auth.timer);
+  const left = auth.expiresAt - Date.now();
+  if (left <= 0) { toLogin('expired=1'); return; }
+  const end = () => { auth.timer = setTimeout(() => toLogin('expired=1'), Math.max(0, auth.expiresAt - Date.now())); };
+  const warnIn = left - 5 * 60_000;
+  if (warnIn > 0) {
+    auth.timer = setTimeout(() => { toast('You will be signed out in 5 minutes. Your work stays saved in this browser.', 'warn', 10000); end(); }, warnIn);
+  } else {
+    end();
+  }
+}
+
+function setAccountMenu(open) {
+  $('#account-menu').hidden = !open;
+  $('#account-btn').setAttribute('aria-expanded', String(open));
+  if (open) $('#sign-out').focus();
+}
+
+async function signOut(wipe) {
+  setAccountMenu(false);
+  if (wipe && !confirm(tr('Sign out and remove your notes, files, generated texts and WordPress details from this browser? Colors, logo and organization details stay.'))) return;
+  try {
+    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!res.ok) throw new Error(String(res.status));
+  } catch {
+    toast('Could not sign out: no connection. Please try again.', 'error');
+    return;
+  }
+  if (wipe) await wipeWork();
+  authChannel?.postMessage('signed-out');
+  location.replace('/login?signedout=1');
+}
+
+function initAuth() {
+  if (LOCAL_FILE) return;
+  $('#account-btn').addEventListener('click', (ev) => { ev.stopPropagation(); setAccountMenu($('#account-menu').hidden); });
+  $('#sign-out').addEventListener('click', () => signOut(false));
+  $('#sign-out-wipe').addEventListener('click', () => signOut(true));
+  document.addEventListener('click', (ev) => { if (!ev.target.closest('#account')) setAccountMenu(false); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#account-menu').hidden) { setAccountMenu(false); $('#account-btn').focus(); } });
+  $('#ui-lang').addEventListener('click', () => { if (auth.email) renderAccount(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && auth.email && Date.now() - auth.lastCheck > 30_000) checkSession();
+  });
+  setInterval(() => { if (auth.email && document.visibilityState === 'visible') checkSession(); }, 5 * 60_000);
+  authChannel?.addEventListener('message', (ev) => { if (ev.data === 'signed-out') location.replace('/login?signedout=1'); });
+  checkSession();
 }
 
 function boot() {
@@ -3473,6 +3598,7 @@ function boot() {
 
   // Interface language + reset
   initI18n();
+  initAuth();
   $('#reset-all').addEventListener('click', resetAll);
   if (store.get('justReset', false)) { store.del('justReset'); toast('Everything has been reset.', 'success', 2500); }
 }

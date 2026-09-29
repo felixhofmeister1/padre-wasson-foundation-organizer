@@ -1,0 +1,17 @@
+{
+  "name": "padre-wasson-foundation-organizer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Notes, photos and documents to a bilingual blog post, social captions and newsletter, behind an email-code sign-in.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "csp": "node scripts/build.mjs --update-csp",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@vercel/firewall": "1.2.5",
+    "@vercel/functions": "3.9.9",
+    "nodemailer": "10.0.12"
+  }
+}
