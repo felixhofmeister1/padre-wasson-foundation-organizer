@@ -99,6 +99,8 @@
     .ok { @apply text-emerald-700; }
     .warn { @apply text-amber-700; }
     .check-row { @apply flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition hover:border-brand-200 hover:bg-brand-50/40 has-[:checked]:border-brand-300 has-[:checked]:bg-brand-50/60; }
+    .opt { @apply inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-brand-300 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 active:scale-95; }
+    .opt[aria-pressed="true"] { @apply border-brand-500 bg-brand-50 text-brand-800 ring-2 ring-brand-500/20; }
   }
 </style>
 <style>
@@ -565,6 +567,61 @@
   </form>
 </dialog>
 
+<!-- ============================ Photo editor ============================ -->
+<dialog id="photo-dialog" class="m-auto w-[min(760px,calc(100vw-2rem))] rounded-3xl bg-white p-0 text-slate-800 shadow-2xl ring-1 ring-slate-900/5" aria-labelledby="photo-title">
+  <form method="dialog" class="flex max-h-[92vh] flex-col">
+    <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
+      <div class="min-w-0">
+        <h2 id="photo-title" class="text-base font-semibold text-slate-900">Edit photo</h2>
+        <p id="photo-name" class="truncate text-sm text-slate-500" data-no-i18n></p>
+      </div>
+      <button value="cancel" class="btn-icon -mr-2" aria-label="Close photo editor"><i data-icon="x" class="size-5"></i></button>
+    </div>
+    <div class="space-y-5 overflow-y-auto px-6 py-5">
+      <div>
+        <div id="photo-stage" class="relative grid h-[min(46vh,380px)] place-items-center overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+          <canvas id="photo-canvas" class="touch-none rounded-sm shadow-lg ring-1 ring-black/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40" tabindex="0" aria-label="Photo preview"></canvas>
+          <div id="photo-loading" class="absolute inset-0 grid place-items-center text-brand-600" hidden></div>
+        </div>
+        <p id="photo-hint" class="meta mt-2 text-center"></p>
+      </div>
+      <section>
+        <h3 class="label">Shape</h3>
+        <div id="photo-ratios" class="flex flex-wrap gap-1.5"></div>
+      </section>
+      <section>
+        <h3 class="label">How the photo fits</h3>
+        <div id="photo-modes" class="grid gap-2 sm:grid-cols-2">
+          <button type="button" class="opt items-start justify-start px-3 py-2.5 text-left" data-mode="fit"><i data-icon="fit" class="mt-0.5 size-4 shrink-0"></i><span><span class="block text-sm font-semibold">Fit fully</span><span class="block font-normal text-slate-500">The whole photo, nothing cut off</span></span></button>
+          <button type="button" class="opt items-start justify-start px-3 py-2.5 text-left" data-mode="fill"><i data-icon="crop" class="mt-0.5 size-4 shrink-0"></i><span><span class="block text-sm font-semibold">Fill the frame</span><span class="block font-normal text-slate-500">Crop and drag to choose the part</span></span></button>
+        </div>
+      </section>
+      <section id="photo-bg-row">
+        <h3 class="label">Background</h3>
+        <div id="photo-bgs" class="flex flex-wrap gap-1.5"></div>
+      </section>
+      <section id="photo-zoom-row" hidden>
+        <label class="label" for="photo-zoom">Zoom</label>
+        <input type="range" id="photo-zoom" min="1" max="4" step="0.01" value="1" class="w-full accent-brand-700">
+      </section>
+      <section>
+        <h3 class="label">Rotate</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" class="opt" data-rotate="-90"><i data-icon="rotateCcw" class="size-3.5"></i>Rotate left</button>
+          <button type="button" class="opt" data-rotate="90"><i data-icon="rotateCw" class="size-3.5"></i>Rotate right</button>
+        </div>
+      </section>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-6 py-4">
+      <button type="button" id="photo-restore" class="btn btn-ghost btn-xs" hidden><i data-icon="reset" class="size-3.5"></i>Back to original</button>
+      <div class="ml-auto flex gap-2">
+        <button value="cancel" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="photo-save" class="btn btn-primary">Save photo</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <div id="toasts" class="pointer-events-none fixed inset-x-4 bottom-4 z-[80] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6" aria-live="polite" aria-atomic="false"></div>
 
 <script type="module">
@@ -676,6 +733,11 @@ const ICONS = {
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
   palette: '<circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+  edit: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+  fit: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><rect width="10" height="8" x="7" y="8" rx="1"/>',
+  crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  rotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  rotateCw: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
   heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
 };
 const icon = (name, cls = 'size-4') =>
@@ -1319,7 +1381,7 @@ async function filesFromDataTransfer(dt) {
 
 function addFiles(list) {
   const incoming = [...list].filter((f) => f && f.size > 0 && !/^\.|^(thumbs\.db|desktop\.ini)$/i.test(f.name));
-  const known = new Set(state.files.map((f) => `${f.name}|${f.size}|${f.lastModified}`));
+  const known = new Set(state.files.map((f) => `${(f.orig || f).name}|${(f.orig || f).size}|${f.lastModified}`));
   const fresh = incoming.filter((f) => !known.has(`${f.name}|${f.size}|${f.lastModified}`));
   const dupes = incoming.length - fresh.length;
   if (!fresh.length) { if (dupes) toast('Those files are already attached.', 'info', 2500); return []; }
@@ -1409,7 +1471,7 @@ const tileEls = new Map();
 
 function tileMarkup(f) {
   const visual = f.kind === 'image'
-    ? `<img src="${urlFor(f)}" alt="" draggable="false" class="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105">`
+    ? `<img src="${urlFor(f)}" alt="" draggable="false" class="absolute inset-0 size-full ${f.edit ? 'object-contain' : 'object-cover'} transition duration-500 group-hover:scale-105">`
     : f.kind === 'video'
       ? `<video src="${urlFor(f)}#t=0.5" muted playsinline preload="metadata" class="absolute inset-0 size-full object-cover"></video><span class="absolute inset-0 grid place-items-center"><span class="grid size-8 place-items-center rounded-full bg-black/45 text-white backdrop-blur">${icon('film', 'size-4')}</span></span>`
       : `<div class="absolute inset-0 flex flex-col items-center justify-center bg-linear-to-br from-brand-50 to-white p-2 text-center">
@@ -1425,6 +1487,7 @@ function tileMarkup(f) {
     <span class="tile-done absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-emerald-500 text-white shadow-sm" hidden title="Uploaded to WordPress">${icon('cloudCheck', 'size-3.5')}</span>
     <button type="button" class="tile-remove absolute right-1.5 top-1.5 z-10 grid size-6 place-items-center rounded-full bg-white/90 text-slate-600 opacity-0 shadow-sm ring-1 ring-slate-200 transition hover:bg-red-500 hover:text-white group-hover:opacity-100 focus-visible:opacity-100" aria-label="Remove ${esc(f.name)}">${icon('x', 'size-3.5')}</button>
     ${f.kind === 'image' ? `<button type="button" class="tile-star absolute bottom-1.5 right-1.5 z-10 grid size-6 place-items-center rounded-full shadow-sm transition" aria-label="Use ${esc(f.name)} as featured image"></button>` : ''}
+    ${f.kind === 'image' ? `<button type="button" class="tile-edit absolute bottom-1.5 right-9 z-10 grid size-6 place-items-center rounded-full shadow-sm transition" aria-label="Edit photo ${esc(f.name)}" title="Edit photo">${icon('edit', 'size-3.5')}</button>` : ''}
     <div class="tile-status absolute inset-0 grid place-items-center bg-white/75 text-brand-600 backdrop-blur-[1px]" hidden></div>
     <div class="tile-progress absolute inset-x-0 bottom-0 h-1.5 bg-black/20" hidden><div class="progress-fill h-full w-0"></div></div>`;
 }
@@ -1483,6 +1546,8 @@ function updateTile(f) {
     star.innerHTML = `<svg class="size-3.5" viewBox="0 0 24 24" fill="${featured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ICONS.star}</svg>`;
     star.setAttribute('aria-pressed', String(featured));
   }
+  const edit = el.querySelector('.tile-edit');
+  if (edit) edit.className = `tile-edit absolute bottom-1.5 right-9 z-10 grid size-6 place-items-center rounded-full shadow-sm transition ${f.edit ? 'bg-brand-700 text-on-brand' : 'bg-white/90 text-slate-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 hover:text-brand-800'}`;
   const meta = [];
   if (f.pages) meta.push(plural(f.pages, 'page'));
   if (f.words) meta.push(plural(f.words, 'word'));
@@ -1534,6 +1599,354 @@ async function restoreFiles() {
     updateExportLabel();
     if (hasOutputs()) renderOutputs();
   } catch { /* IndexedDB unavailable – files simply won't survive a reload */ }
+}
+
+/* ---------- Photo editor: pick a shape, fit the whole photo in (with a background) or fill and crop, rotate.
+   The edited copy replaces the photo everywhere (previews, downloads, WordPress); the original is kept in f.orig. ---------- */
+const PHOTO_RATIOS = [
+  { id: 'orig', label: 'Original' },
+  { id: '16:9', r: 16 / 9, label: 'Blog' },
+  { id: '2:1', r: 2, label: 'Newsletter' },
+  { id: '1.91:1', r: 1.91, label: 'LinkedIn & Facebook' },
+  { id: '1:1', r: 1, label: 'Square' },
+  { id: '4:5', r: 4 / 5, label: 'Portrait' },
+];
+const PHOTO_BGS = [
+  { id: 'blur', label: 'Blurred photo' },
+  { id: 'white', label: 'White', color: '#ffffff' },
+  { id: 'black', label: 'Black', color: '#000000' },
+  { id: 'brand', label: 'Brand color' },
+];
+const PHOTO_DEFAULT = { ratio: '16:9', mode: 'fit', bg: 'blur', rot: 0, zoom: 1, x: 0.5, y: 0.5 };
+const PHOTO_MAX_SIDE = 3000;
+const editor = { f: null, img: null, url: '', preview: null, e: null, k: 1, raf: 0, pointers: new Map(), pinch: null };
+
+const srcSize = (img) => [img.naturalWidth || img.width, img.naturalHeight || img.height];
+
+/** Frame size (W×H) in source pixels and where the rotated photo (sw×sh) sits in it. */
+function photoLayout(iw, ih, e) {
+  const turned = e.rot % 180 !== 0;
+  const sw = turned ? ih : iw, sh = turned ? iw : ih;
+  const r = PHOTO_RATIOS.find((x) => x.id === e.ratio)?.r || sw / sh;
+  if (e.mode === 'fill') {
+    const cw = (sw / sh > r ? sh * r : sw) / e.zoom, ch = cw / r;
+    const cx = Math.min(Math.max(e.x * sw, cw / 2), sw - cw / 2);
+    const cy = Math.min(Math.max(e.y * sh, ch / 2), sh - ch / 2);
+    return { sw, sh, W: cw, H: ch, dx: cw / 2 - cx, dy: ch / 2 - cy, cx, cy };
+  }
+  const W = sw / sh > r ? sw : sh * r, H = sw / sh > r ? sw / r : sh;
+  return { sw, sh, W, H, dx: (W - sw) / 2, dy: (H - sh) / 2 };
+}
+
+function drawTurned(ctx, img, rot, x, y, w, h) {
+  const turned = rot % 180 !== 0;
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate((rot * Math.PI) / 180);
+  ctx.drawImage(img, -(turned ? h : w) / 2, -(turned ? w : h) / 2, turned ? h : w, turned ? w : h);
+  ctx.restore();
+}
+
+let canvasBlur;
+function supportsCanvasBlur() {
+  if (canvasBlur !== undefined) return canvasBlur;
+  try {
+    const x = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    x.canvas.width = x.canvas.height = 8;
+    if (typeof x.filter !== 'string') return (canvasBlur = false);
+    x.filter = 'blur(2px)';
+    x.fillRect(4, 4, 2, 2);
+    canvasBlur = x.getImageData(2, 2, 1, 1).data[3] > 0;
+  } catch { canvasBlur = false; }
+  return canvasBlur;
+}
+
+/** The photo itself, scaled up to cover the frame and blurred, as a soft background. */
+function blurBackdrop(ctx, img, rot, sw, sh, W, H) {
+  const s = Math.max(W / sw, H / sh) * 1.1;
+  const w = sw * s, h = sh * s, x = (W - w) / 2, y = (H - h) / 2;
+  if (supportsCanvasBlur()) {
+    ctx.save();
+    ctx.filter = `blur(${Math.max(4, Math.round(Math.max(W, H) / 30))}px)`;
+    drawTurned(ctx, img, rot, x, y, w, h);
+    ctx.restore();
+  } else {
+    // No canvas filters (older Safari): a tiny copy stretched back up blurs just as well.
+    const t = document.createElement('canvas');
+    const q = 24 / W;
+    t.width = 24; t.height = Math.max(1, Math.round(H * q));
+    drawTurned(t.getContext('2d'), img, rot, x * q, y * q, w * q, h * q);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(t, 0, 0, W, H);
+    ctx.restore();
+  }
+  ctx.fillStyle = 'rgba(15, 23, 42, .18)';
+  ctx.fillRect(0, 0, W, H);
+}
+
+/** Draws the edited photo onto ctx's canvas; k = canvas pixels per source pixel. */
+function drawPhoto(ctx, img, e, k) {
+  const [iw, ih] = srcSize(img);
+  const L = photoLayout(iw, ih, e);
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  if (e.mode === 'fit') {
+    if (e.bg === 'blur') blurBackdrop(ctx, img, e.rot, L.sw * k, L.sh * k, W, H);
+    else {
+      ctx.fillStyle = e.bg === 'brand' ? state.theme.brand : (PHOTO_BGS.find((b) => b.id === e.bg)?.color || '#ffffff');
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  drawTurned(ctx, img, e.rot, L.dx * k, L.dy * k, L.sw * k, L.sh * k);
+}
+
+function scaledCopy(img, max) {
+  const [w, h] = srcSize(img);
+  const s = Math.min(1, max / Math.max(w, h, 1));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * s));
+  c.height = Math.max(1, Math.round(h * s));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+function drawEditor() {
+  cancelAnimationFrame(editor.raf);
+  editor.raf = requestAnimationFrame(() => {
+    const src = editor.preview;
+    if (!src) return;
+    const L = photoLayout(src.width, src.height, editor.e);
+    const stage = $('#photo-stage');
+    const k = Math.min((stage.clientWidth - 24) / L.W, (stage.clientHeight - 24) / L.H);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const c = $('#photo-canvas');
+    const cssW = Math.max(1, Math.round(L.W * k)), cssH = Math.max(1, Math.round(L.H * k));
+    c.style.width = `${cssW}px`;
+    c.style.height = `${cssH}px`;
+    c.width = Math.round(cssW * dpr);
+    c.height = Math.round(cssH * dpr);
+    editor.k = k;
+    drawPhoto(c.getContext('2d'), src, editor.e, c.width / L.W);
+  });
+}
+
+function renderEditorControls() {
+  const e = editor.e;
+  $('#photo-ratios').innerHTML = PHOTO_RATIOS.map((r) => `<button type="button" class="opt" data-ratio="${r.id}" aria-pressed="${e.ratio === r.id}">${r.r ? `<span class="font-semibold tabular-nums">${r.id}</span>` : ''}<span>${r.label}</span></button>`).join('');
+  $('#photo-bgs').innerHTML = PHOTO_BGS.map((b) => {
+    const swatch = b.id === 'blur'
+      ? '<span class="size-3.5 rounded-full bg-linear-to-br from-slate-300 to-slate-500 ring-1 ring-black/10"></span>'
+      : `<span class="size-3.5 rounded-full ring-1 ring-black/15" style="background:${b.id === 'brand' ? state.theme.brand : b.color}"></span>`;
+    return `<button type="button" class="opt" data-bg="${b.id}" aria-pressed="${e.bg === b.id}">${swatch}<span>${b.label}</span></button>`;
+  }).join('');
+  $$('#photo-modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === e.mode)));
+  $('#photo-bg-row').hidden = e.mode !== 'fit';
+  $('#photo-zoom-row').hidden = e.mode !== 'fill';
+  $('#photo-zoom').value = String(e.zoom);
+  $('#photo-canvas').classList.toggle('cursor-grab', e.mode === 'fill');
+  $('#photo-hint').textContent = e.mode === 'fill'
+    ? 'Drag the photo to choose what stays in the frame. Use Zoom to crop closer.'
+    : 'The whole photo is shown. The empty space around it gets the background you pick.';
+  $('#photo-restore').hidden = !editor.f?.orig;
+}
+
+/** Keeps the crop inside the photo after a move, zoom, rotation or shape change. */
+function settleCrop() {
+  const e = editor.e;
+  if (e.mode !== 'fill' || !editor.preview) return;
+  const L = photoLayout(editor.preview.width, editor.preview.height, e);
+  e.x = L.cx / L.sw;
+  e.y = L.cy / L.sh;
+}
+
+function movePhoto(dxCss, dyCss) {
+  const e = editor.e;
+  if (e.mode !== 'fill' || !editor.preview) return;
+  const L = photoLayout(editor.preview.width, editor.preview.height, e);
+  e.x = (L.cx - dxCss / editor.k) / L.sw;
+  e.y = (L.cy - dyCss / editor.k) / L.sh;
+  settleCrop();
+  drawEditor();
+}
+
+function zoomPhoto(z) {
+  editor.e.zoom = Math.min(4, Math.max(1, z));
+  $('#photo-zoom').value = String(editor.e.zoom);
+  settleCrop();
+  drawEditor();
+}
+
+async function openPhotoEditor(f) {
+  if (!f || f.kind !== 'image') return;
+  if (state.exporting) { toast('Wait until the WordPress export has finished.', 'warn'); return; }
+  const dlg = $('#photo-dialog');
+  editor.f = f;
+  editor.e = { ...PHOTO_DEFAULT, ...(f.edit || {}) };
+  editor.img = editor.preview = null;
+  $('#photo-name').textContent = f.orig?.name || f.name;
+  $('#photo-save').disabled = true;
+  $('#photo-loading').hidden = false;
+  $('#photo-loading').innerHTML = spinner('size-6');
+  renderEditorControls();
+  if (!dlg.open) dlg.showModal();
+  const url = URL.createObjectURL(f.orig?.blob || f.blob);
+  editor.url = url;
+  try {
+    const img = await loadImage(url);
+    if (editor.f !== f) return;
+    editor.img = img;
+    editor.preview = scaledCopy(img, 1600);
+  } catch (err) {
+    toast(err.message, 'error');
+    dlg.close();
+    return;
+  }
+  $('#photo-loading').hidden = true;
+  $('#photo-save').disabled = false;
+  settleCrop();
+  drawEditor();
+}
+
+function photoRecord(f) {
+  return { blob: f.blob, name: f.name, type: f.type, size: f.size, width: f.width, height: f.height, wp: f.wp };
+}
+
+function refreshPhoto(f) {
+  if (objectUrls.has(f.id)) { URL.revokeObjectURL(objectUrls.get(f.id)); objectUrls.delete(f.id); }
+  f.uploadState = null;
+  const el = tileEls.get(f.id);
+  if (el) { el.innerHTML = tileMarkup(f); el.title = `${f.name} · ${fmtBytes(f.size)}`; }
+  persistFile(f);
+  afterFileChange();
+}
+
+async function savePhotoEdit() {
+  const { f, img } = editor;
+  if (!f || !img) return;
+  const e = { ...editor.e };
+  const unchanged = e.rot === 0 && e.ratio === 'orig' && (e.mode === 'fit' || e.zoom === 1);
+  if (unchanged) {
+    if (f.orig) restoreOriginalPhoto(f);
+    $('#photo-dialog').close();
+    return;
+  }
+  const btn = $('#photo-save');
+  btn.disabled = true;
+  try {
+    const [iw, ih] = srcSize(img);
+    const L = photoLayout(iw, ih, e);
+    const s = Math.min(1, PHOTO_MAX_SIDE / Math.max(L.W, L.H));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(L.W * s));
+    c.height = Math.max(1, Math.round(L.H * s));
+    drawPhoto(c.getContext('2d'), img, e, c.width / L.W);
+    const blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('The browser could not save the edited photo.'))), 'image/jpeg', 0.9));
+    if (!f.orig) f.orig = photoRecord(f);
+    Object.assign(f, {
+      blob, type: blob.type, size: blob.size, width: c.width, height: c.height,
+      name: f.orig.name.replace(/\.[^.]+$/, '') + '.jpg',
+      edit: e, wp: {},
+    });
+    refreshPhoto(f);
+    $('#photo-dialog').close();
+    toast('Photo saved. The edited version is used everywhere, including the WordPress upload.', 'success', 3500);
+  } catch (err) {
+    toast(err.message || 'The browser could not save the edited photo.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function restoreOriginalPhoto(f) {
+  if (!f.orig) return;
+  const o = f.orig;
+  Object.assign(f, { blob: o.blob, name: o.name, type: o.type, size: o.size, width: o.width, height: o.height, wp: o.wp || {} });
+  delete f.orig;
+  delete f.edit;
+  refreshPhoto(f);
+  toast('Back to the original photo.', 'info', 2500);
+}
+
+function initPhotoEditor() {
+  const dlg = $('#photo-dialog'), c = $('#photo-canvas');
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-edit-photo]');
+    if (b) openPhotoEditor(state.files.find((x) => x.id === b.dataset.editPhoto));
+  });
+  dlg.addEventListener('close', () => {
+    if (editor.url) URL.revokeObjectURL(editor.url);
+    Object.assign(editor, { f: null, img: null, url: '', preview: null });
+    editor.pointers.clear();
+  });
+  dlg.addEventListener('click', (ev) => {
+    const e = editor.e;
+    if (!e) return;
+    const ratio = ev.target.closest('[data-ratio]'), mode = ev.target.closest('[data-mode]');
+    const bg = ev.target.closest('[data-bg]'), rot = ev.target.closest('[data-rotate]');
+    if (ratio) e.ratio = ratio.dataset.ratio;
+    else if (mode) e.mode = mode.dataset.mode;
+    else if (bg) e.bg = bg.dataset.bg;
+    else if (rot) e.rot = (e.rot + Number(rot.dataset.rotate) + 360) % 360;
+    else return;
+    settleCrop();
+    renderEditorControls();
+    drawEditor();
+  });
+  $('#photo-zoom').addEventListener('input', (ev) => zoomPhoto(Number(ev.target.value)));
+  $('#photo-save').addEventListener('click', savePhotoEdit);
+  $('#photo-restore').addEventListener('click', () => { const f = editor.f; dlg.close(); restoreOriginalPhoto(f); });
+
+  // Drag to move, wheel or pinch to zoom (only when filling the frame)
+  c.addEventListener('pointerdown', (ev) => {
+    if (editor.e?.mode !== 'fill') return;
+    c.setPointerCapture(ev.pointerId);
+    editor.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    editor.pinch = null;
+    c.classList.add('cursor-grabbing');
+  });
+  c.addEventListener('pointermove', (ev) => {
+    const p = editor.pointers.get(ev.pointerId);
+    if (!p) return;
+    const pts = [...editor.pointers.values()];
+    if (pts.length === 2) {
+      const o = pts.find((q) => q !== p);
+      const d = Math.hypot(ev.clientX - o.x, ev.clientY - o.y);
+      if (editor.pinch) zoomPhoto(editor.pinch.zoom * (d / editor.pinch.d));
+      else editor.pinch = { d: Math.max(1, d), zoom: editor.e.zoom };
+    } else {
+      movePhoto(ev.clientX - p.x, ev.clientY - p.y);
+    }
+    p.x = ev.clientX;
+    p.y = ev.clientY;
+  });
+  const lift = (ev) => {
+    editor.pointers.delete(ev.pointerId);
+    editor.pinch = null;
+    if (!editor.pointers.size) c.classList.remove('cursor-grabbing');
+  };
+  c.addEventListener('pointerup', lift);
+  c.addEventListener('pointercancel', lift);
+  c.addEventListener('wheel', (ev) => {
+    if (editor.e?.mode !== 'fill') return;
+    ev.preventDefault();
+    zoomPhoto(editor.e.zoom * Math.exp(-ev.deltaY * 0.0015));
+  }, { passive: false });
+  c.addEventListener('keydown', (ev) => {
+    if (editor.e?.mode !== 'fill') return;
+    const step = ev.shiftKey ? 40 : 10;
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (moves[ev.key]) { ev.preventDefault(); movePhoto(...moves[ev.key]); }
+    else if (ev.key === '+' || ev.key === '=') { ev.preventDefault(); zoomPhoto(editor.e.zoom * 1.1); }
+    else if (ev.key === '-') { ev.preventDefault(); zoomPhoto(editor.e.zoom / 1.1); }
+  });
+  window.addEventListener('resize', () => { if (dlg.open) drawEditor(); });
 }
 
 /* =====================================================================
@@ -2111,10 +2524,14 @@ function renderOutputs() {
   updateRunMeta();
 }
 
+const editPhotoBtn = (f, cls = '') => `<button type="button" data-edit-photo="${f.id}" class="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-900/5 backdrop-blur transition hover:bg-white hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 ${cls}">${icon('edit', 'size-3.5')}Edit photo</button>`;
+/** Edited photos are shown whole; untouched ones fill their frame like before. */
+const photoFit = (f) => (f.edit ? 'object-contain bg-slate-100' : 'object-cover');
+
 function photoThumb(f, cls = '') {
   return f.kind === 'video'
     ? `<div class="relative overflow-hidden rounded-lg bg-slate-900 ${cls}"><video src="${urlFor(f)}#t=0.5" muted preload="metadata" class="size-full object-cover"></video><span class="absolute inset-0 grid place-items-center text-white">${icon('film', 'size-5')}</span></div>`
-    : `<img src="${urlFor(f)}" alt="${esc(altFor(f, state.lang))}" title="${esc(altFor(f, state.lang))}" class="rounded-lg object-cover ${cls}">`;
+    : `<img src="${urlFor(f)}" alt="${esc(altFor(f, state.lang))}" title="${esc(altFor(f, state.lang))}" class="rounded-lg ${photoFit(f)} ${cls}">`;
 }
 
 function renderBlog(o) {
@@ -2146,7 +2563,8 @@ function renderBlog(o) {
           <div class="flex flex-wrap gap-1.5">${copyBtn('blog-rich', 'Copy post')}${copyBtn('blog-html', 'Copy HTML', 'code')}${copyBtn('blog-blocks', 'Copy blocks', 'code')}</div>
         </div>
         ${feat ? `<figure class="relative mx-4 mt-4 overflow-hidden rounded-xl sm:mx-7">
-          <img src="${urlFor(feat)}" alt="${esc(altFor(feat, state.lang))}" class="aspect-[16/9] w-full object-cover">
+          <img src="${urlFor(feat)}" alt="${esc(altFor(feat, state.lang))}" class="${feat.edit ? 'h-auto' : 'aspect-[16/9] object-cover'} w-full">
+          ${editPhotoBtn(feat, 'absolute right-3 top-3')}
           <figcaption class="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-brand-800 shadow-sm backdrop-blur"><svg class="size-3.5 text-accent-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.star}</svg>Featured image</figcaption>
         </figure>` : ''}
         <article id="blog-body" class="pw-article" contenteditable="true" spellcheck="true" aria-label="Blog post body (editable)">${o.blog.html}</article>
@@ -2163,7 +2581,7 @@ function renderBlog(o) {
         </summary>
         <div class="space-y-3 border-t border-slate-100 px-4 py-4">
           ${photos.map((f) => `<div class="flex gap-3">
-            <div class="relative shrink-0">${photoThumb(f, 'size-16')}${getFeatured() === f ? `<span class="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-accent-500 text-on-accent shadow"><svg class="size-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.star}</svg></span>` : ''}</div>
+            <div class="relative shrink-0">${photoThumb(f, 'size-16')}${getFeatured() === f ? `<span class="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-accent-500 text-on-accent shadow"><svg class="size-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.star}</svg></span>` : ''}<button type="button" data-edit-photo="${f.id}" class="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-white text-slate-600 shadow ring-1 ring-slate-200 transition hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30" aria-label="Edit photo ${esc(f.name)}" title="Edit photo">${icon('edit', 'size-3')}</button></div>
             <div class="min-w-0 flex-1 space-y-1.5">
               <input class="input py-1.5 text-xs" data-alt="${f.id}" value="${esc(altFor(f, state.lang))}" aria-label="Alt text for ${esc(f.name)}" placeholder="Alt text: what's in the photo?">
               <input class="input py-1.5 text-xs" data-cap="${f.id}" value="${esc(captionFor(f, state.lang))}" aria-label="Caption for ${esc(f.name)}" placeholder="Caption (optional)">
@@ -2204,11 +2622,12 @@ function socialPhoto(key) {
   if (!feat) return '';
   const more = selectedImages().length - 1;
   return `<div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
-    <img src="${urlFor(feat)}" alt="" class="size-14 shrink-0 rounded-lg object-cover">
+    <img src="${urlFor(feat)}" alt="" class="size-14 shrink-0 rounded-lg ${photoFit(feat)}">
     <div class="min-w-0 flex-1 text-xs">
       <p class="truncate font-medium text-slate-800">Suggested photo · ${esc(feat.name)}</p>
       <p class="text-slate-500">${more > 0 ? `+${plural(more, 'more photo')} selected` : 'The starred photo from step 1'}</p>
     </div>
+    <button type="button" class="copy-btn" data-edit-photo="${feat.id}">${icon('edit', 'size-3.5')}Edit</button>
     <a class="copy-btn" href="${urlFor(feat)}" download="${esc(feat.name)}" data-dl="${key}">${icon('download', 'size-3.5')}Photo</a>
   </div>`;
 }
@@ -2286,7 +2705,7 @@ function renderEmail(o) {
         </div>
         <div class="mx-auto max-w-[560px] overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-slate-200">
           <div class="bg-brand-700 px-6 py-4 text-[15px] font-semibold text-on-brand">${esc(org())}</div>
-          ${feat ? `<img src="${urlFor(feat)}" alt="${esc(altFor(feat, state.lang))}" class="aspect-[2/1] w-full object-cover">` : ''}
+          ${feat ? `<div class="relative"><img src="${urlFor(feat)}" alt="${esc(altFor(feat, state.lang))}" class="${feat.edit ? 'h-auto' : 'aspect-[2/1] object-cover'} w-full">${editPhotoBtn(feat, 'absolute right-3 top-3')}</div>` : ''}
           <div class="pw-email space-y-4 px-6 py-6">
             <p id="email-greeting" contenteditable="true" spellcheck="true" aria-label="Greeting (editable)">${esc(e.greeting)}</p>
             <div id="email-body" contenteditable="true" spellcheck="true" aria-label="Email body (editable)">${e.bodyHtml}</div>
@@ -2909,6 +3328,7 @@ function initFiles() {
     const f = state.files.find((x) => x.id === tile.dataset.id);
     if (!f) return;
     if (ev.target.closest('.tile-remove')) { removeFile(f.id); return; }
+    if (ev.target.closest('.tile-edit')) { openPhotoEditor(f); return; }
     if (ev.target.closest('.tile-star')) {
       setFeatured(f);
       afterFileChange();
@@ -3078,6 +3498,33 @@ const UI_DE = {
   'Featured image': 'Beitragsbild',
   'Added to the post before the call to action when you export.': 'Wird beim Export vor dem Handlungsaufruf in den Beitrag eingefügt.',
   'Edit': 'Bearbeiten',
+  'Edit photo': 'Foto bearbeiten',
+  'Wait until the WordPress export has finished.': 'Bitte warten Sie, bis der Export zu WordPress fertig ist.',
+  'Close photo editor': 'Fotobearbeitung schließen',
+  'Photo preview': 'Fotovorschau',
+  'Shape': 'Format',
+  'Square': 'Quadrat',
+  'Portrait': 'Hochformat',
+  'How the photo fits': 'Wie das Foto hineinpasst',
+  'Fit fully': 'Ganz zeigen',
+  'The whole photo, nothing cut off': 'Das ganze Foto, nichts wird abgeschnitten',
+  'Fill the frame': 'Rahmen füllen',
+  'Crop and drag to choose the part': 'Zuschneiden und den Ausschnitt verschieben',
+  'Background': 'Hintergrund',
+  'Blurred photo': 'Unscharfes Foto',
+  'White': 'Weiß',
+  'Black': 'Schwarz',
+  'Brand color': 'Markenfarbe',
+  'Rotate': 'Drehen',
+  'Rotate left': 'Nach links drehen',
+  'Rotate right': 'Nach rechts drehen',
+  'Back to original': 'Zurück zum Original',
+  'Save photo': 'Foto speichern',
+  'Drag the photo to choose what stays in the frame. Use Zoom to crop closer.': 'Ziehen Sie das Foto, um den Ausschnitt zu wählen. Mit Zoom schneiden Sie enger zu.',
+  'The whole photo is shown. The empty space around it gets the background you pick.': 'Das ganze Foto wird gezeigt. Der freie Platz drumherum bekommt den gewählten Hintergrund.',
+  'Photo saved. The edited version is used everywhere, including the WordPress upload.': 'Foto gespeichert. Die bearbeitete Version wird überall verwendet, auch beim Hochladen zu WordPress.',
+  'Back to the original photo.': 'Wieder das Originalfoto.',
+  'The browser could not save the edited photo.': 'Der Browser konnte das bearbeitete Foto nicht speichern.',
   "Alt text: what's in the photo?": 'Alternativtext: Was ist auf dem Foto?',
   'Caption (optional)': 'Bildunterschrift (optional)',
   'Alt text is sent to WordPress with each photo, which helps accessibility and search.': 'Der Alternativtext wird mit jedem Foto an WordPress gesendet – gut für Barrierefreiheit und Suchmaschinen.',
@@ -3301,6 +3748,7 @@ const UI_DE_PATTERNS = [
   [/^Remove all (.+)\?$/, (m, x) => `Alle ${deUnits(x)} entfernen?`],
   [/^Remove (.+)$/, '$1 entfernen'],
   [/^Use (.+) as featured image$/, '$1 als Beitragsbild verwenden'],
+  [/^Edit photo (.+)$/, 'Foto $1 bearbeiten'],
   [/^(.+), (Photo|Video|Audio|PDF|Word|Text|File), (selected|not selected)(, featured image)?$/, (m, n, k, s, f) => `${n}, ${{ Photo: 'Foto', Video: 'Video', Audio: 'Audio', PDF: 'PDF', Word: 'Word', Text: 'Text', File: 'Datei' }[k]}, ${s === 'selected' ? 'ausgewählt' : 'nicht ausgewählt'}${f ? ', Beitragsbild' : ''}`],
   [/^(.+) copied to clipboard\.$/, (m, l) => `${COPY_LABEL_DE[l] || l} in die Zwischenablage kopiert.`],
   [/^“(.+)” is now the featured image\.$/, '„$1“ ist jetzt das Beitragsbild.'],
@@ -3509,6 +3957,7 @@ function boot() {
   pipe.reset();
   initSettings();
   initFiles();
+  initPhotoEditor();
 
   // Restore
   const saved = store.get('campaign', null);
