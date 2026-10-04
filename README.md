@@ -51,6 +51,7 @@ Drop anything into step 1: photos, PDFs, Word files (.docx), text files, videos,
 
 - **Selection:** every added file is selected automatically. Click a file to leave it out; the checkbox selects or clears all at once.
 - **Featured image:** the first photo becomes the featured image. Click the star on another photo to change it.
+- **Editing photos:** click the pencil on a photo (or **Edit photo** in the blog, social or newsletter preview). Pick a shape (16:9 blog, 2:1 newsletter, 1.91:1 LinkedIn & Facebook, square, portrait or the original), then either **Fit fully** (the whole photo, with a blurred, white, black or brand-color background around it) or **Fill the frame** (drag and zoom to choose the crop). You can also rotate it. The edited version is used everywhere, including downloads and the WordPress upload; **Back to original** undoes it.
 - **Reading:** text is read from PDFs, Word and text files and used as source material.
 - **Storage:** files are kept in the browser (IndexedDB), so they are still there after a reload.
 - **Alt text:** each photo gets alt text derived from its file name, editable under "Alt text & captions" in the blog tab.
