@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Our Trips · Reclaim Yourself (prototype)</title>
+  <meta name="description" content="Prototype of the Our Trips page with a one-minute 'Find your retreat' quiz.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1f3b2f">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/no-server.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#trips">Skip to all trips</a>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="wordmark" href="#top">
+        <svg class="wordmark__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4 25 13 10l5 8 3-4 7 11z" fill="currentColor"/><circle cx="23" cy="8" r="3" fill="currentColor"/></svg>
+        <span>Reclaim Yourself</span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-list">
+          <span class="nav-toggle__bars" aria-hidden="true"></span>
+          <span>Menu</span>
+        </button>
+        <ul class="nav-list" id="nav-list">
+          <li><a href="#trips" aria-current="page">Our trips</a></li>
+          <li><a href="#">Teachers</a></li>
+          <li><a href="#">About us</a></li>
+          <li><a href="#">Journal</a></li>
+          <li><a href="#">Contact</a></li>
+          <li class="nav-list__cta"><a class="btn btn--forest btn--small" href="#">Enquire</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="file-warning" id="file-warning" hidden>
+      <div class="container">
+        <strong>Open this through a web server.</strong>
+        Browsers block the quiz and trips.json when index.html is opened straight from disk.
+        In this folder run <code>npx serve .</code> (or <code>python3 -m http.server</code>) and open the address it prints.
+      </div>
+    </div>
+
+    <section class="finder on-dark" id="find-your-retreat" aria-label="Trip finder">
+      <svg class="finder__contours" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M200 60c80 0 150 50 150 130s-60 150-150 150S40 290 40 200 120 60 200 60z"/>
+          <path d="M200 92c62 0 118 40 118 100s-48 118-118 118S72 268 72 198s66-106 128-106z"/>
+          <path d="M202 124c46 0 86 30 86 72s-36 86-86 86-98-30-98-82 52-76 98-76z"/>
+          <path d="M204 156c30 0 54 20 54 46s-24 52-54 52-62-18-62-50 32-48 62-48z"/>
+          <path d="M206 186c14 0 24 8 24 18s-10 20-24 20-26-8-26-20 12-18 26-18z"/>
+        </g>
+      </svg>
+
+      <div class="container finder__banner" id="finder-banner">
+        <div class="finder__copy">
+          <p class="eyebrow eyebrow--gold">Trip finder</p>
+          <p class="finder__title">Not sure where to go?</p>
+          <p class="finder__lede">Find your retreat in one minute.</p>
+        </div>
+        <div class="finder__actions">
+          <button class="btn btn--cream btn--large" type="button" id="open-quiz" aria-controls="finder-panel" aria-expanded="false">
+            <span id="open-quiz-label">Find my retreat</span>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="finder__note">4 quick questions, no sign-up. Or <a href="#trips">browse all trips</a>.</p>
+        </div>
+      </div>
+
+      <div class="container finder__panel" id="finder-panel" hidden></div>
+    </section>
+
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero__art" id="hero-art"></div>
+      <div class="hero__title container">
+        <h1 id="page-title">Our trips</h1>
+      </div>
+    </section>
+
+    <div class="container hero__intro">
+      <p>Small-group adventures and restorative retreats in extraordinary corners of the world, led by teachers and guides we love. Every trip is designed to help you slow down, feel strong and come home more like yourself.</p>
+    </div>
+
+    <section class="container trips" id="trips" aria-labelledby="trips-title" tabindex="-1">
+      <div class="trips__head">
+        <h2 class="trips__title" id="trips-title">All trips</h2>
+        <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
+      </div>
+      <ul class="trip-grid" id="trip-list"></ul>
+      <noscript><p class="trips__empty">This prototype needs JavaScript to show the trips and the quiz.</p></noscript>
+    </section>
+  </main>
+
+  <footer class="site-footer on-dark">
+    <div class="container site-footer__inner">
+      <div>
+        <p class="wordmark wordmark--footer">Reclaim Yourself</p>
+        <p class="site-footer__tag">Adventures and retreats for body and mind.</p>
+      </div>
+      <ul class="site-footer__links">
+        <li><a href="#trips">Our trips</a></li>
+        <li><a href="#find-your-retreat">Find your retreat</a></li>
+        <li><a href="#">Teachers</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+      <p class="site-footer__note">Prototype for discussion. Trip details, teachers and images are placeholders.</p>
+    </div>
+  </footer>
+
+  <button class="finder-pill is-hidden" type="button" id="finder-pill" tabindex="-1" aria-hidden="true">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+    <span id="finder-pill-label">Find your retreat in one minute</span>
+  </button>
+
+  <dialog class="trip-dialog" id="trip-dialog" aria-labelledby="dialog-title">
+    <button class="dialog__close" type="button" data-action="close-dialog" aria-label="Close trip details">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div id="dialog-content"></div>
+  </dialog>
+</body>
+</html>
