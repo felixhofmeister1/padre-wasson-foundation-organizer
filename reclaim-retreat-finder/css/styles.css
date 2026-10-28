@@ -73,8 +73,8 @@ h1, h2, h3 {
   width: 100%;
   max-width: var(--max);
   margin-inline: auto;
-  padding-left: max(var(--gutter), env(safe-area-inset-left));
-  padding-right: max(var(--gutter), env(safe-area-inset-right));
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
 }
 
 .on-dark { --focus: var(--cream); color: var(--cream); }

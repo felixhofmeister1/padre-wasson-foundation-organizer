@@ -518,7 +518,12 @@ function syncUrl() {
     if (state.step === RESULTS_STEP && state.answers[key]) url.searchParams.set(key, state.answers[key]);
     else url.searchParams.delete(key);
   }
-  if (url.href !== window.location.href) history.replaceState(history.state, '', url);
+  if (url.href === window.location.href) return;
+  try {
+    history.replaceState(history.state, '', url);
+  } catch {
+    // Some embedded or sandboxed frames refuse URL changes; the results still work without them.
+  }
 }
 
 /* ---------- Opening and closing ---------- */
@@ -553,7 +558,13 @@ function openQuiz() {
     return;
   }
   // One history entry, so the phone's back button closes the quiz instead of leaving the page.
-  if (!history.state?.finder) history.pushState({ finder: true }, '', window.location.href);
+  if (!history.state?.finder) {
+    try {
+      history.pushState({ finder: true }, '', window.location.href);
+    } catch {
+      // Without history (e.g. a sandboxed frame) the Close button still works; only the Back button won't close it.
+    }
+  }
   showPanel();
 }
 
