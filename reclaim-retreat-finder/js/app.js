@@ -1,12 +1,13 @@
 /*
- * "Find your retreat" prototype: the Our Trips list, the four-question quiz and the results.
- * All trip data comes from trips.json; the scoring rules live in matching.js.
+ * "Find your retreat" prototype: a homepage and the Our Trips page, with the four-question quiz,
+ * the team's picks, filters and the results. Views switch on the URL hash (#home, #our-trips).
+ * All trip data comes from trips.json; the scoring and filtering rules live in matching.js.
  */
 
 import {
   ANSWER_KEYS, BUDGETS, BUDGET_STRETCH_GBP, MAX_SCORE, MONTH_IDS, MONTH_NAMES, PARTIAL_POINTS, SEASONS, THEMES, WEIGHTS,
-  answerLabel, explainMatch, formatDateRange, formatPrice, formatPriceRange, isUpcoming, loadTrips,
-  parseAnswers, parseISODate, rankTrips, scoreBreakdown, todayStamp,
+  answerLabel, explainMatch, featuredTrips, filterCounts, filterTrips, formatDateRange, formatPrice, formatPriceRange,
+  isUpcoming, loadTrips, parseAnswers, parseISODate, rankTrips, scoreBreakdown, todayStamp,
 } from './matching.js';
 import { sceneSVG } from './scenes.js';
 
@@ -134,6 +135,8 @@ const state = {
   result: null,
   signup: null,
   lastProgress: 0,
+  view: null,
+  filters: { theme: '', season: '', budget: '' },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -153,6 +156,23 @@ const els = {
   dialogContent: $('dialog-content'),
   navToggle: document.querySelector('.nav-toggle'),
   navList: $('nav-list'),
+  navTrips: document.querySelector('[data-nav="trips"]'),
+  views: { home: $('home'), trips: $('our-trips') },
+  homeTitle: $('home-title'),
+  pageTitle: $('page-title'),
+  homeHero: document.querySelector('.home-hero'),
+  homeArt: $('home-art'),
+  ctaProposed: $('cta-proposed'),
+  ctaProposedNote: $('cta-proposed-note'),
+  ctaToday: $('cta-today'),
+  compareBtns: [...document.querySelectorAll('[data-compare]')],
+  waysCount: $('ways-count'),
+  picks: $('picks'),
+  picksList: $('picks-list'),
+  picksTitle: $('picks-title'),
+  picksLede: document.querySelector('.picks__lede'),
+  filters: Object.fromEntries([...document.querySelectorAll('[data-filter]')].map((el) => [el.dataset.filter, el])),
+  filtersClear: $('filters-clear'),
 };
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -195,9 +215,60 @@ const themeLine = (trip) => trip.themes.filter((t) => THEMES[t]).map((t) => THEM
 
 /* ---------- Trip list ---------- */
 
+function tripCard(trip, { isMatch = false, pick = false } = {}) {
+  const classes = ['trip-card', pick && 'trip-card--pick', trip.status === 'sold_out' && 'is-sold-out', isMatch && 'is-match'].filter(Boolean).join(' ');
+  const corner = pick && trip.featured
+    ? `<span class="badge badge--pick">${esc(trip.featured)}</span>`
+    : isMatch ? `<span class="badge">${icon('check')}Your match</span>` : '';
+  return `<li class="${classes}"${pick ? '' : ` id="trip-${esc(trip.id)}"`}>
+    <div class="media">${media(trip)}${corner}${statusBadge(trip)}</div>
+    <p class="eyebrow">${esc(trip.destination)}</p>
+    <h3 class="trip-card__title">${esc(trip.title)}</h3>
+    ${!pick && themeLine(trip) ? `<p class="trip-card__themes">${esc(themeLine(trip))}</p>` : ''}
+    ${metaList(trip)}
+    ${moreButton(trip, 'btn--outline btn--small')}
+  </li>`;
+}
+
+function renderPicks(matches) {
+  const picks = featuredTrips(state.trips, state.today, 3);
+  els.picks.hidden = picks.length === 0;
+  if (!picks.length) return;
+  els.picksTitle.textContent = picks.length === 1 ? 'Start with our pick' : `Start with our ${word(picks.length)} picks`;
+  els.picksLede.textContent = picks.length === 1
+    ? 'If you only look at one trip, make it this one.'
+    : `If you only look at ${word(picks.length)} trips, make it these.`;
+  els.picksList.innerHTML = picks.map((t) => tripCard(t, { pick: true, isMatch: matches.has(t.id) })).join('');
+}
+
+const FILTER_KEYS = ['theme', 'season', 'budget'];
+const FILTER_ANY = { theme: 'Any type', season: 'Any time', budget: 'Any budget' };
+const FILTER_LABEL = {
+  theme: (v) => THEMES[v].label,
+  season: (v) => SEASONS[v].label,
+  budget: (v) => BUDGETS[v].label,
+};
+const isFiltered = () => FILTER_KEYS.some((k) => state.filters[k]);
+
+function renderFilters(upcoming) {
+  for (const key of FILTER_KEYS) {
+    const current = state.filters[key];
+    const counts = filterCounts(upcoming, state.filters, key);
+    const any = filterTrips(upcoming, { ...state.filters, [key]: '' }).length;
+    // Options that would show nothing are disabled, so a filter never leads to an empty page.
+    els.filters[key].innerHTML = `<option value="">${FILTER_ANY[key]} (${any})</option>` +
+      Object.entries(counts).map(([value, n]) => `<option value="${value}"${n === 0 && value !== current ? ' disabled' : ''}>${esc(FILTER_LABEL[key](value))} (${n})</option>`).join('');
+    els.filters[key].value = current;
+  }
+  els.filtersClear.hidden = !isFiltered();
+}
+
 function renderList() {
   const upcoming = state.trips.filter((t) => isUpcoming(t, state.today));
   const matches = new Set(state.result ? state.result.picks.map((p) => p.trip.id) : []);
+  renderPicks(matches);
+  renderFilters(upcoming);
+  els.waysCount.textContent = upcoming.length ? `all ${upcoming.length} trips` : 'every trip';
 
   if (!upcoming.length) {
     els.count.textContent = 'No upcoming trips';
@@ -205,22 +276,14 @@ function renderList() {
     return;
   }
 
-  els.count.textContent = `${upcoming.length} upcoming ${plural(upcoming.length, 'trip', 'trips')}, soonest first${matches.size ? ' · your matches are marked' : ''}`;
-  els.list.innerHTML = upcoming.map((trip) => {
-    const isMatch = matches.has(trip.id);
-    return `<li class="trip-card${trip.status === 'sold_out' ? ' is-sold-out' : ''}${isMatch ? ' is-match' : ''}" id="trip-${esc(trip.id)}">
-      <div class="media">
-        ${media(trip)}
-        ${isMatch ? `<span class="badge">${icon('check')}Your match</span>` : ''}
-        ${statusBadge(trip)}
-      </div>
-      <p class="eyebrow">${esc(trip.destination)}</p>
-      <h3 class="trip-card__title">${esc(trip.title)}</h3>
-      ${themeLine(trip) ? `<p class="trip-card__themes">${esc(themeLine(trip))}</p>` : ''}
-      ${metaList(trip)}
-      ${moreButton(trip, 'btn--outline btn--small')}
-    </li>`;
-  }).join('');
+  const shown = filterTrips(upcoming, state.filters);
+  const marked = matches.size ? ' · your matches are marked' : '';
+  els.count.textContent = isFiltered()
+    ? `Showing ${shown.length} of ${upcoming.length} trips${marked}`
+    : `${upcoming.length} upcoming ${plural(upcoming.length, 'trip', 'trips')}, soonest first${marked}`;
+  els.list.innerHTML = shown.length
+    ? shown.map((trip) => tripCard(trip, { isMatch: matches.has(trip.id) })).join('')
+    : `<li class="trips__empty">No trips match all of those. <button class="text-link" type="button" data-action="clear-filters">Clear filters</button> or <a href="#find-your-retreat">let the quiz find the closest</a>.</li>`;
 }
 
 /* ---------- Quiz ---------- */
@@ -546,6 +609,14 @@ function hidePanel() {
   els.banner.hidden = false;
   els.openBtn.setAttribute('aria-expanded', 'false');
   updatePill();
+  if (window.location.hash === '#find-your-retreat') {
+    try {
+      history.replaceState(history.state, '', '#our-trips');
+    } catch {
+      // Keeping the old hash only means a reload reopens the quiz.
+    }
+  }
+  if (state.view !== 'trips') return;
   els.openBtn.focus({ preventScroll: true });
   const top = els.finder.getBoundingClientRect().top;
   if (top < 0) els.finder.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
@@ -583,7 +654,7 @@ window.addEventListener('popstate', (event) => {
 let finderVisible = true;
 
 function updatePill() {
-  const show = !finderVisible && state.loaded;
+  const show = !finderVisible && state.loaded && state.view === 'trips';
   els.pillLabel.textContent = state.open
     ? state.step === RESULTS_STEP ? 'Back to your matches' : 'Back to the trip finder'
     : state.step === RESULTS_STEP ? 'See your matches' : 'Find your retreat in one minute';
@@ -598,6 +669,61 @@ if ('IntersectionObserver' in window) {
     updatePill();
   }, { threshold: 0 }).observe(els.finder);
 }
+
+/* ---------- Views: homepage and Our trips ---------- */
+
+// Plain #names only, so the same links work on any host, including inside an embedded frame.
+const ROUTES = { '': 'home', '#home': 'home', '#our-trips': 'trips', '#trips': 'trips', '#picks': 'trips', '#find-your-retreat': 'trips' };
+
+function viewFor(hash) {
+  if (Object.hasOwn(ROUTES, hash)) return ROUTES[hash];
+  return hash.startsWith('#trip-') ? 'trips' : null;
+}
+
+function showView(view) {
+  if (state.view === view) return false;
+  state.view = view;
+  els.views.home.hidden = view !== 'home';
+  els.views.trips.hidden = view !== 'trips';
+  if (view === 'trips') els.navTrips.setAttribute('aria-current', 'page');
+  else els.navTrips.removeAttribute('aria-current');
+  updatePill();
+  return true;
+}
+
+function route({ initial = false } = {}) {
+  const hash = window.location.hash;
+  const view = viewFor(hash);
+  if (!view) return; // other in-page anchors (e.g. the skip link) keep the current view
+  // Jump straight there on load or when the view changes; glide only within the same view.
+  const behavior = showView(view) || initial ? 'instant' : scrollBehavior();
+  if (hash === '#find-your-retreat') { openQuiz(); return; }
+  const target = hash === '#trips' ? els.trips
+    : hash === '#picks' ? (els.picks.hidden ? els.trips : els.picks)
+    : hash.startsWith('#trip-') ? document.getElementById(hash.slice(1)) : null;
+  if (target) {
+    target.scrollIntoView({ behavior, block: 'start' });
+    if (!initial) target.focus?.({ preventScroll: true });
+    return;
+  }
+  if (initial) return;
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  (view === 'home' ? els.homeTitle : els.pageTitle).focus({ preventScroll: true });
+}
+
+window.addEventListener('hashchange', () => route());
+
+/* The demo switch on the homepage: today's low-contrast button versus the proposed buttons. */
+function setCompare(mode) {
+  const today = mode === 'today';
+  els.ctaToday.hidden = !today;
+  els.ctaProposed.hidden = today;
+  els.ctaProposedNote.hidden = today;
+  els.homeHero.classList.toggle('is-today', today);
+  els.compareBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.compare === mode)));
+}
+
+els.compareBtns.forEach((b) => b.addEventListener('click', () => setCompare(b.dataset.compare)));
 
 /* ---------- Trip details ---------- */
 
@@ -702,10 +828,31 @@ els.panel.addEventListener('input', (event) => {
   }
 });
 
+function clearFilters() {
+  state.filters = { theme: '', season: '', budget: '' };
+  renderList();
+  els.filters.theme.focus();
+}
+
 document.addEventListener('click', (event) => {
   const trigger = event.target.closest('[data-action="trip"]');
-  if (trigger) openTrip(trigger.dataset.trip);
+  if (trigger) { openTrip(trigger.dataset.trip); return; }
+  if (event.target.closest('[data-action="clear-filters"]')) { clearFilters(); return; }
+  // A link to the hash we're already on fires no hashchange, so route it here.
+  const link = event.target.closest('a[href^="#"]');
+  if (link && link.getAttribute('href') === window.location.hash && viewFor(link.getAttribute('href'))) {
+    event.preventDefault();
+    route();
+  }
 });
+
+document.querySelector('.filters').addEventListener('change', (event) => {
+  const key = event.target.dataset.filter;
+  if (!key) return;
+  state.filters[key] = event.target.value;
+  renderList();
+});
+els.filtersClear.addEventListener('click', clearFilters);
 
 els.navToggle.addEventListener('click', () => {
   const open = els.navToggle.getAttribute('aria-expanded') !== 'true';
@@ -729,6 +876,7 @@ document.addEventListener('keydown', (event) => {
 /* ---------- Start ---------- */
 
 async function init() {
+  els.homeArt.innerHTML = sceneSVG('aerial', { seed: 'home-aerial', width: 1600, height: 900 });
   els.heroArt.innerHTML = sceneSVG('peaks', { seed: 'reclaim-hero', width: 1600, height: 640 });
 
   const params = new URLSearchParams(window.location.search);
@@ -740,6 +888,7 @@ async function init() {
     state.answers = deepLink;
     state.step = RESULTS_STEP;
   }
+  showView(deepLink ? 'trips' : viewFor(window.location.hash) || 'home');
 
   try {
     const response = await fetch('trips.json', { cache: 'no-cache' });
@@ -756,6 +905,7 @@ async function init() {
   resolveLoaded();
   renderList();
   if (deepLink) showPanel({ focus: false });
+  else route({ initial: true });
   updatePill();
 }
 

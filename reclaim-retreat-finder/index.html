@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Our Trips · Reclaim Yourself (prototype)</title>
-  <meta name="description" content="Prototype of the Our Trips page with a one-minute 'Find your retreat' quiz.">
+  <title>Reclaim Yourself · Find your retreat (prototype)</title>
+  <meta name="description" content="Prototype of a clearer way into the trips: a visible homepage button, a one-minute quiz, three curated picks and simple filters.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#1f3b2f">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -15,11 +15,11 @@
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#trips">Skip to all trips</a>
+  <a class="skip-link" href="#main">Skip to main content</a>
 
   <header class="site-header">
     <div class="container site-header__inner">
-      <a class="wordmark" href="#top">
+      <a class="wordmark" href="#home">
         <svg class="wordmark__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4 25 13 10l5 8 3-4 7 11z" fill="currentColor"/><circle cx="23" cy="8" r="3" fill="currentColor"/></svg>
         <span>Reclaim Yourself</span>
       </a>
@@ -29,18 +29,18 @@
           <span>Menu</span>
         </button>
         <ul class="nav-list" id="nav-list">
-          <li><a href="#trips" aria-current="page">Our trips</a></li>
-          <li><a href="#">Teachers</a></li>
-          <li><a href="#">About us</a></li>
-          <li><a href="#">Journal</a></li>
-          <li><a href="#">Contact</a></li>
-          <li class="nav-list__cta"><a class="btn btn--forest btn--small" href="#">Enquire</a></li>
+          <li><a href="#our-trips" data-nav="trips">Our retreats</a></li>
+          <li><a href="#home">Destinations</a></li>
+          <li><a href="#home">About us</a></li>
+          <li><a href="#home">Journal</a></li>
+          <li><a href="#home">Contact</a></li>
+          <li class="nav-list__cta"><a class="btn btn--forest btn--small" href="#find-your-retreat">Find your retreat</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <main id="top">
+  <main id="main">
     <div class="file-warning" id="file-warning" hidden>
       <div class="container">
         <strong>Open this through a web server.</strong>
@@ -49,54 +49,153 @@
       </div>
     </div>
 
-    <section class="finder on-dark" id="find-your-retreat" aria-label="Trip finder">
-      <svg class="finder__contours" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
-        <g fill="none" stroke="currentColor" stroke-width="1.2">
-          <path d="M200 60c80 0 150 50 150 130s-60 150-150 150S40 290 40 200 120 60 200 60z"/>
-          <path d="M200 92c62 0 118 40 118 100s-48 118-118 118S72 268 72 198s66-106 128-106z"/>
-          <path d="M202 124c46 0 86 30 86 72s-36 86-86 86-98-30-98-82 52-76 98-76z"/>
-          <path d="M204 156c30 0 54 20 54 46s-24 52-54 52-62-18-62-50 32-48 62-48z"/>
-          <path d="M206 186c14 0 24 8 24 18s-10 20-24 20-26-8-26-20 12-18 26-18z"/>
-        </g>
-      </svg>
+    <!-- Homepage -->
+    <div class="view" id="home" data-view="home">
+      <section class="home-hero on-dark" aria-labelledby="home-title">
+        <div class="home-hero__art" id="home-art"></div>
+        <div class="container home-hero__content">
+          <h1 class="home-hero__title" id="home-title" tabindex="-1">Find yourself somewhere wild.</h1>
+          <p class="home-hero__lede">Premium small-group wellness adventures and restorative retreats</p>
 
-      <div class="container finder__banner" id="finder-banner">
-        <div class="finder__copy">
-          <p class="eyebrow eyebrow--gold">Trip finder</p>
-          <p class="finder__title">Not sure where to go?</p>
-          <p class="finder__lede">Find your retreat in one minute.</p>
+          <div class="home-hero__actions" id="cta-proposed">
+            <a class="btn btn--cream btn--large" href="#find-your-retreat">
+              Find my retreat
+              <svg class="icon icon--nudge" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="btn btn--ghost btn--large" href="#our-trips">See all retreats</a>
+          </div>
+          <p class="home-hero__note" id="cta-proposed-note">4 questions, about a minute, no sign-up.</p>
+
+          <div class="home-hero__actions" id="cta-today" hidden>
+            <a class="old-cta" href="#our-trips">Explore our retreats »</a>
+          </div>
         </div>
-        <div class="finder__actions">
-          <button class="btn btn--cream btn--large" type="button" id="open-quiz" aria-controls="finder-panel" aria-expanded="false">
-            <span id="open-quiz-label">Find my retreat</span>
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
-          <p class="finder__note">4 quick questions, no sign-up. Or <a href="#trips">browse all trips</a>.</p>
+
+        <div class="compare" role="group" aria-labelledby="compare-label">
+          <span class="compare__label" id="compare-label">Demo: homepage button</span>
+          <button class="compare__btn" type="button" data-compare="today" aria-pressed="false">Today</button>
+          <button class="compare__btn" type="button" data-compare="proposed" aria-pressed="true">Proposed</button>
         </div>
-      </div>
+      </section>
 
-      <div class="container finder__panel" id="finder-panel" hidden></div>
-    </section>
-
-    <section class="hero" aria-labelledby="page-title">
-      <div class="hero__art" id="hero-art"></div>
-      <div class="hero__title container">
-        <h1 id="page-title">Our trips</h1>
-      </div>
-    </section>
-
-    <div class="container hero__intro">
-      <p>Small-group adventures and restorative retreats in extraordinary corners of the world, led by teachers and guides we love. Every trip is designed to help you slow down, feel strong and come home more like yourself.</p>
+      <section class="container ways" aria-labelledby="ways-title">
+        <div class="ways__head">
+          <h2 class="ways__title" id="ways-title">Three ways to find your retreat</h2>
+          <p>Pick whichever suits you. Each one gets you to the right trip in a minute or two.</p>
+        </div>
+        <ul class="ways__list">
+          <li>
+            <a class="way" href="#find-your-retreat">
+              <svg class="way__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+              <span class="way__title">Answer 4 questions</span>
+              <span class="way__text">Get your three best matches, with the reasons, in about a minute.</span>
+              <span class="way__go">Find my retreat</span>
+            </a>
+          </li>
+          <li>
+            <a class="way" href="#picks">
+              <svg class="way__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+              <span class="way__title">Start with our picks</span>
+              <span class="way__text">Three trips our team would choose first, each for a different kind of traveller.</span>
+              <span class="way__go">See our picks</span>
+            </a>
+          </li>
+          <li>
+            <a class="way" href="#trips">
+              <svg class="way__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              <span class="way__title">Browse and filter</span>
+              <span class="way__text">See <span id="ways-count">every trip</span>, narrowed by type, season and budget.</span>
+              <span class="way__go">Browse all retreats</span>
+            </a>
+          </li>
+        </ul>
+      </section>
     </div>
 
-    <section class="container trips" id="trips" aria-labelledby="trips-title" tabindex="-1">
-      <div class="trips__head">
-        <h2 class="trips__title" id="trips-title">All trips</h2>
-        <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
+    <!-- Our trips -->
+    <div class="view" id="our-trips" data-view="trips" hidden>
+      <section class="finder on-dark" id="find-your-retreat" aria-label="Trip finder">
+        <svg class="finder__contours" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+          <g fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M200 60c80 0 150 50 150 130s-60 150-150 150S40 290 40 200 120 60 200 60z"/>
+            <path d="M200 92c62 0 118 40 118 100s-48 118-118 118S72 268 72 198s66-106 128-106z"/>
+            <path d="M202 124c46 0 86 30 86 72s-36 86-86 86-98-30-98-82 52-76 98-76z"/>
+            <path d="M204 156c30 0 54 20 54 46s-24 52-54 52-62-18-62-50 32-48 62-48z"/>
+            <path d="M206 186c14 0 24 8 24 18s-10 20-24 20-26-8-26-20 12-18 26-18z"/>
+          </g>
+        </svg>
+
+        <div class="container finder__banner" id="finder-banner">
+          <div class="finder__copy">
+            <p class="eyebrow eyebrow--gold">Trip finder</p>
+            <p class="finder__title">Not sure where to go?</p>
+            <p class="finder__lede">Find your retreat in one minute.</p>
+          </div>
+          <div class="finder__actions">
+            <button class="btn btn--cream btn--large" type="button" id="open-quiz" aria-controls="finder-panel" aria-expanded="false">
+              <span id="open-quiz-label">Find my retreat</span>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <p class="finder__note">4 quick questions, no sign-up. Or <a href="#trips">browse all trips</a>.</p>
+          </div>
+        </div>
+
+        <div class="container finder__panel" id="finder-panel" hidden></div>
+      </section>
+
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero__art" id="hero-art"></div>
+        <div class="hero__title container">
+          <h1 id="page-title" tabindex="-1">Our trips</h1>
+        </div>
+      </section>
+
+      <div class="container hero__intro">
+        <p>Small-group adventures and restorative retreats in extraordinary corners of the world, led by teachers and guides we love.</p>
       </div>
-      <ul class="trip-grid" id="trip-list"></ul>
-      <noscript><p class="trips__empty">This prototype needs JavaScript to show the trips and the quiz.</p></noscript>
-    </section>
+
+      <section class="container picks" id="picks" aria-labelledby="picks-title" tabindex="-1" hidden>
+        <div class="picks__head">
+          <p class="eyebrow">Short on time?</p>
+          <h2 class="picks__title" id="picks-title">Start with our three picks</h2>
+          <p class="picks__lede">If you only look at three trips, make it these.</p>
+        </div>
+        <ul class="picks__list" id="picks-list"></ul>
+      </section>
+
+      <section class="container trips" id="trips" aria-labelledby="trips-title" tabindex="-1">
+        <div class="trips__head">
+          <h2 class="trips__title" id="trips-title">All trips</h2>
+        </div>
+        <div class="filters" role="group" aria-label="Filter trips">
+          <div class="filter">
+            <label for="filter-theme">Type</label>
+            <div class="filter__control">
+              <select id="filter-theme" data-filter="theme"></select>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="filter">
+            <label for="filter-season">When</label>
+            <div class="filter__control">
+              <select id="filter-season" data-filter="season"></select>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div class="filter">
+            <label for="filter-budget">Budget</label>
+            <div class="filter__control">
+              <select id="filter-budget" data-filter="budget"></select>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+          <button class="text-link filters__clear" type="button" id="filters-clear" hidden>Clear filters</button>
+        </div>
+        <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
+        <ul class="trip-grid" id="trip-list"></ul>
+        <noscript><p class="trips__empty">This prototype needs JavaScript to show the trips and the quiz.</p></noscript>
+      </section>
+    </div>
   </main>
 
   <footer class="site-footer on-dark">
@@ -106,10 +205,10 @@
         <p class="site-footer__tag">Adventures and retreats for body and mind.</p>
       </div>
       <ul class="site-footer__links">
-        <li><a href="#trips">Our trips</a></li>
+        <li><a href="#our-trips">Our retreats</a></li>
         <li><a href="#find-your-retreat">Find your retreat</a></li>
-        <li><a href="#">Teachers</a></li>
-        <li><a href="#">Contact</a></li>
+        <li><a href="#picks">Our picks</a></li>
+        <li><a href="#home">Home</a></li>
       </ul>
       <p class="site-footer__note">Prototype for discussion. Trip details, teachers and images are placeholders.</p>
     </div>

@@ -1,7 +1,7 @@
 /*
  * Placeholder landscapes: a calm, flat illustration for each trip until real photography is
  * added (set "image" in trips.json). Pick one with "scene" in trips.json: peaks, towers, arctic,
- * islands, coast, fjord, volcano, baobab, palms, desert, loch, tea. Unknown or empty -> peaks.
+ * islands, coast, fjord, volcano, baobab, palms, desert, loch, tea, aerial. Unknown or empty -> peaks.
  */
 
 let uid = 0;
@@ -58,6 +58,24 @@ function hill(w, h, pts, fill, extra = '') {
 
 function island(pts, base, fill) {
   return `<path d="M${pt(pts[0])} ${curve(pts).slice(1)} L${r1(pts[pts.length - 1][0])} ${r1(base)} Z" fill="${fill}"/>`;
+}
+
+/** A closed, slightly irregular shape (islands, reefs, ripples). */
+function blob(cx, cy, rx, ry, rand, n = 9, wobble = 0.3) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const k = 1 - wobble / 2 + rand() * wobble;
+    pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  let d = `M${pt(pts[0])}`;
+  for (let i = 0; i < n; i++) {
+    const [p0, p1, p2, p3] = [pts[(i - 1 + n) % n], pts[i], pts[(i + 1) % n], pts[(i + 2) % n]];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${pt(c1)} ${pt(c2)} ${pt(p2)}`;
+  }
+  return `${d} Z`;
 }
 
 function range(w, h, pts, fill, snow) {
@@ -285,6 +303,37 @@ const SCENES = {
       `<rect x="0" y="${r1(water)}" width="${w}" height="${r1(h - water)}" fill="#99adae"/>` +
       ripples(w, water + 8, h * 0.88, rand, '#dfe7e4', 12) +
       hill(w, h, ridge(w, rand, { base: h * 0.98, amp: h * 0.08, count: 5 }), '#3a5343');
+  },
+  aerial(w, h, rand, id) {
+    const s = h / 600;
+    const cx = w * 0.56;
+    const cy = h * 0.48;
+    let rings = '';
+    for (let k = 4; k >= 1; k--) {
+      rings += `<path d="${blob(cx, cy, (150 + k * 55) * s, (105 + k * 42) * s, rand, 10, 0.16)}" fill="none" stroke="#a3e0da" stroke-width="${r1(2.5 * s)}" opacity="${r1(0.5 - k * 0.09)}"/>`;
+    }
+    let trees = '';
+    for (let i = 0; i < 14; i++) {
+      const y = (h / 13) * i + rand() * 20 * s;
+      const x = w * 0.085 - (y / h) * w * 0.03 + rand() * 12 * s;
+      trees += circle(x, y, (16 + rand() * 12) * s, i % 2 ? '#2f5238' : '#24402c');
+    }
+    const bx = w * 0.36;
+    const by = h * 0.8;
+    const wake = `M${r1(bx)} ${r1(by)} C${r1(bx - 50 * s)} ${r1(by + 50 * s)} ${r1(bx - 30 * s)} ${r1(by + 130 * s)} ${r1(bx + 50 * s)} ${r1(by + 220 * s)}`;
+    return sky(id, w, h, ['#2a8b98', '#1f7587', '#185f72']) +
+      `<path d="M0 0 H${r1(w * 0.3)} C${r1(w * 0.24)} ${r1(h * 0.3)} ${r1(w * 0.31)} ${r1(h * 0.62)} ${r1(w * 0.23)} ${h} H0 Z" fill="#5db7b4" opacity="0.85"/>` +
+      rings +
+      `<path d="${blob(cx, cy, 178 * s, 128 * s, rand, 10, 0.22)}" fill="#4fb0ad" opacity="0.6"/>` +
+      `<path d="${blob(cx, cy, 122 * s, 86 * s, rand, 11, 0.38)}" fill="#6d6759"/>` +
+      `<path d="${blob(cx - 10 * s, cy - 8 * s, 94 * s, 62 * s, rand, 10, 0.42)}" fill="#3e6a44"/>` +
+      `<path d="${blob(cx - 26 * s, cy - 16 * s, 50 * s, 34 * s, rand, 9, 0.45)}" fill="#567f50"/>` +
+      `<path d="M0 0 H${r1(w * 0.17)} C${r1(w * 0.13)} ${r1(h * 0.25)} ${r1(w * 0.19)} ${r1(h * 0.55)} ${r1(w * 0.13)} ${h} H0 Z" fill="#eddcbb"/>` +
+      `<path d="M0 0 H${r1(w * 0.1)} C${r1(w * 0.075)} ${r1(h * 0.3)} ${r1(w * 0.11)} ${r1(h * 0.6)} ${r1(w * 0.065)} ${h} H0 Z" fill="#2c4a33"/>` +
+      trees +
+      `<path d="${wake}" stroke="#ffffff" stroke-width="${r1(20 * s)}" fill="none" opacity="0.18" stroke-linecap="round"/>` +
+      `<path d="${wake}" stroke="#ffffff" stroke-width="${r1(5 * s)}" fill="none" opacity="0.65" stroke-linecap="round"/>` +
+      `<rect x="${r1(bx - 6 * s)}" y="${r1(by - 26 * s)}" width="${r1(12 * s)}" height="${r1(30 * s)}" rx="${r1(6 * s)}" fill="#f7f5f0" transform="rotate(-28 ${r1(bx)} ${r1(by)})"/>`;
   },
   tea(w, h, rand, id) {
     const s = h / 600;

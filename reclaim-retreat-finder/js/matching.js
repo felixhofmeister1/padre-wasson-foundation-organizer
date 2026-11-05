@@ -245,6 +245,7 @@ export function normaliseTrip(raw, index = 0) {
       image: typeof raw.image === 'string' ? raw.image.trim() : '',
       imageAlt: typeof raw.image_alt === 'string' ? raw.image_alt.trim() : '',
       url: typeof raw.url === 'string' ? raw.url.trim() : '',
+      featured: typeof raw.featured === 'string' ? raw.featured.trim() : raw.featured === true ? 'Our pick' : '',
     },
   };
 }
@@ -276,6 +277,32 @@ export function isUpcoming(trip, today) {
 /** Can be recommended: upcoming and not sold out. */
 export function isBookable(trip, today) {
   return isUpcoming(trip, today) && trip.status !== 'sold_out';
+}
+
+/* ---------- Browsing: picks and filters ---------- */
+
+/** The team's shortlist: trips marked "featured" that can still be booked, soonest first. */
+export function featuredTrips(trips, today, limit = 3) {
+  return trips.filter((t) => t.featured && isBookable(t, today)).slice(0, limit);
+}
+
+function inBudget(trip, budget) {
+  const band = BUDGETS[budget];
+  return trip.priceMin <= band.max && trip.priceMax >= band.min;
+}
+
+/** Narrows the list by theme, season and budget band; an empty value means "any". */
+export function filterTrips(trips, { theme = '', season = '', budget = '' } = {}) {
+  return trips.filter((t) =>
+    (!theme || t.themes.includes(theme)) &&
+    (!season || t.season.includes(season)) &&
+    (!budget || inBudget(t, budget)));
+}
+
+/** For one filter, how many trips each option would show given the other filters. */
+export function filterCounts(trips, filters, key) {
+  const values = { theme: Object.keys(THEMES), season: Object.keys(SEASONS), budget: Object.keys(BUDGETS) }[key];
+  return Object.fromEntries(values.map((v) => [v, filterTrips(trips, { ...filters, [key]: v }).length]));
 }
 
 /* ---------- Scoring ---------- */

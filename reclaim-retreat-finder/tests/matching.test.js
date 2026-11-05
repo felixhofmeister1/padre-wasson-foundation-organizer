@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  MAX_SCORE, THEMES, explainMatch, formatDateRange, formatPriceRange, loadTrips, normaliseTrip,
+  MAX_SCORE, THEMES, explainMatch, featuredTrips, filterCounts, filterTrips, formatDateRange, formatPriceRange, loadTrips, normaliseTrip,
   parseAnswers, parseISODate, rankTrips, scoreBreakdown, scoreTrip,
 } from '../js/matching.js';
 import { SCENE_NAMES, sceneSVG } from '../js/scenes.js';
@@ -215,4 +215,31 @@ test('every placeholder scene draws an accessible SVG', () => {
     assert.doesNotMatch(svg, /NaN|undefined/);
   }
   assert.match(sceneSVG('unknown'), /aria-hidden="true"/);
+});
+
+test('our picks: only featured trips that can still be booked, at most three', () => {
+  const trips = [
+    trip({ id: 'a', featured: 'Best first retreat', start_date: '2027-03-01', end_date: '2027-03-05' }),
+    trip({ id: 'b', featured: true, status: 'sold_out' }),
+    trip({ id: 'c', featured: 'Gone', start_date: '2026-10-01', end_date: '2026-10-05' }),
+    trip({ id: 'd' }),
+    trip({ id: 'e', featured: 'Two', start_date: '2027-04-01', end_date: '2027-04-05' }),
+    trip({ id: 'f', featured: 'Three', start_date: '2027-05-01', end_date: '2027-05-05' }),
+    trip({ id: 'g', featured: 'Four', start_date: '2027-06-01', end_date: '2027-06-05' }),
+  ];
+  assert.deepEqual(featuredTrips(trips, TODAY).map((t) => t.id), ['a', 'e', 'f']);
+  assert.equal(trips[1].featured, 'Our pick', 'featured: true gets a default label');
+  assert.deepEqual(featuredTrips(trips.filter((t) => !t.featured), TODAY), []);
+});
+
+test('filters narrow the list and count what each option would show', () => {
+  const { trips } = loadTrips(sample);
+  const upcoming = trips.filter((t) => t.start >= parseISODate(TODAY));
+  assert.equal(filterTrips(upcoming, {}).length, upcoming.length);
+  const sauna = filterTrips(upcoming, { theme: 'sauna' });
+  assert.deepEqual(sauna.map((t) => t.id), ['arctic-winter-adventure-finland', 'scottish-isles-swim-sauna', 'norway-winter-fjords']);
+  assert.deepEqual(filterTrips(upcoming, { theme: 'sauna', season: 'winter' }).map((t) => t.id), ['arctic-winter-adventure-finland', 'norway-winter-fjords']);
+  assert.ok(filterTrips(upcoming, { budget: 'under-2500' }).every((t) => t.priceMin <= 2500));
+  const seasons = filterCounts(upcoming, { theme: 'sauna', season: 'winter', budget: '' }, 'season');
+  assert.deepEqual(seasons, { spring: 0, summer: 0, autumn: 2, winter: 2 }, 'counts ignore the filter being changed');
 });

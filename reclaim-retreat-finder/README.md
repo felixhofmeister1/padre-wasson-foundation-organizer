@@ -1,7 +1,11 @@
 # Find your retreat: clickable prototype
 
-A mock **Our Trips** page for Reclaim Yourself with an optional one-minute quiz that suggests three trips. It is plain HTML, CSS and JavaScript with no build step and no backend, so it runs on any static host, including Vercel.
+A mock homepage and **Our Trips** page for Reclaim Yourself that make it quicker to get from landing on the site to a trip that fits. Visitors stay about a minute and currently face around 30 trips at once; this gives them short, clear ways in. It is plain HTML, CSS and JavaScript with no build step and no backend, so it runs on any static host, including Vercel.
 
+- **A homepage button people can see.** The live site's "Explore our retreats" button is grey and see-through over a busy photo. Here it is a solid button ("Find my retreat") beside "See all retreats", on a darkened photo. A **Today / Proposed** switch at the bottom of the hero shows the difference live.
+- **Three ways in,** under the homepage hero: answer 4 questions, start with the team's picks, or browse and filter.
+- **Our picks:** a short "Start with our three picks" row on the trips page, each with a reason (e.g. "Best first retreat"). Set with `featured` in `trips.json`.
+- **Filters:** type, season and budget, with live counts. Options that would show nothing are greyed out, so a filter never leads to an empty page.
 - **The trip list stays put.** A banner at the top ("Not sure where to go? Find your retreat in one minute.") opens the quiz in place. All trips are still listed below, and every quiz screen has a "Browse all trips" link and a Close button.
 - **Four questions, one per screen,** with a progress bar and a Back button: what you're craving, when you can travel (season, month or "I'm flexible"), budget, and who's travelling.
 - **Results:** the top 3 trips as cards with an image, destination, dates, teacher, price range, a one-line "Why this matches you", a "Find out more" button, and a "How we scored this" breakdown. The email box "Get your matches + the free retreat guide" sits directly under the cards.
@@ -37,12 +41,15 @@ This folder is its own site. Deploy it as a separate Vercel project; the reposit
 
 Open the deployed link on a phone and on a laptop.
 
-1. **The problem.** Scroll the trip list: twelve trips, no filters, a lot to take in.
-2. **The way in.** Scroll back up and tap **Find my retreat**. The quiz opens in place of the banner; the list is still underneath.
-3. **Four taps.** Each answer moves to the next question. Back and Close are always there, and so is **Browse all trips**.
-4. **Results.** Each card says in plain words why it fits. Open **How we scored this** to show the scoring isn't a black box. Tap **Find out more** to see the trip details.
-5. **Capture.** Enter an email in the sign-up box. Nothing is sent in the prototype.
-6. **Back to browsing.** Scroll down: the three matches are marked in the full list, and a small button brings you back to them.
+1. **The button.** On the homepage, tap **Today** in the "Demo: homepage button" switch to show the current grey button, then **Proposed**.
+2. **Three ways in.** Scroll down to "Three ways to find your retreat".
+3. **The way in.** Tap **Find my retreat**. The quiz opens at the top of the trips page; the list is still underneath.
+4. **Four taps.** Each answer moves to the next question. Back and Close are always there, and so is **Browse all trips**.
+5. **Results.** Each card says in plain words why it fits. Open **How we scored this** to show the scoring isn't a black box. Tap **Find out more** to see the trip details.
+6. **Capture.** Enter an email in the sign-up box. Nothing is sent in the prototype.
+7. **Back to browsing.** Close the quiz and scroll: "Start with our three picks", then the filters. Pick **Sauna & cold plunge** and **Winter**: the list drops to two trips. Your quiz matches are marked in the list.
+
+Page links: `#home` (homepage), `#our-trips` (trips page), `#find-your-retreat` (opens the quiz), `#picks`, `#trips` (the full list).
 
 Links that jump straight to results with the sample data (add them to the deployed address):
 
@@ -99,8 +106,9 @@ Edit or replace [`trips.json`](trips.json). It holds a `trips` list; each trip l
 | `status` | No | `available` (default), `few_places` or `sold_out`. Sold-out trips stay in the list with a label but are never suggested by the quiz. |
 | `summary`, `highlights` | No | Shown in the trip details. |
 | `image`, `image_alt` | No | A real photo URL and its description. Without `image`, an illustrated placeholder is drawn instead. |
-| `scene` | No | Which placeholder illustration to draw: `peaks`, `towers`, `arctic`, `islands`, `coast`, `fjord`, `volcano`, `baobab`, `palms`, `desert`, `loch` or `tea`. |
+| `scene` | No | Which placeholder illustration to draw: `peaks`, `towers`, `arctic`, `islands`, `coast`, `fjord`, `volcano`, `baobab`, `palms`, `desert`, `loch`, `tea` or `aerial`. |
 | `url` | No | The real trip page. When set, "Find out more" links there instead of opening the details panel. |
+| `featured` | No | Puts the trip in "Start with our picks", with this text as its label (e.g. `"Best first retreat"`). The first three bookable featured trips, soonest first, are shown; leave it out everywhere to hide the section. |
 
 If something in the file is wrong (an unknown theme, a missing date, a duplicate id), the page still loads and leaves that trip out or ignores that tag. Each problem is listed in the browser console (open the developer tools to see it). `npm test` also checks that `trips.json` loads cleanly.
 
@@ -142,11 +150,11 @@ There is no backend, so nothing is sent. On submit, the page validates the addre
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | The page: header, quiz banner, hero, trip list, footer, trip details panel |
+| `index.html` | The homepage and trips page: header, hero with the Today/Proposed switch, three ways in, quiz banner, picks, filters, trip list, footer, trip details panel |
 | `trips.json` | All trip data |
 | `css/styles.css` | All styling (brand colours are variables at the top) |
 | `js/app.js` | The page behaviour: quiz, results, sign-up, list, trip details |
-| `js/matching.js` | Scoring, ranking and the "why this matches you" wording, with no page code |
+| `js/matching.js` | Scoring, ranking, the "why this matches you" wording, the picks and the filters, with no page code |
 | `js/scenes.js` | The illustrated placeholder images |
 | `fonts/` | Barlow and Barlow Condensed, self-hosted (SIL Open Font License, see `fonts/OFL.txt`) |
 | `tests/` | Tests for the matching rules and for `trips.json`: run `npm test` (Node 18 or newer). The ranking scenarios use a frozen copy of the sample trips in `tests/fixtures/`, so replacing `trips.json` doesn't break them. |
