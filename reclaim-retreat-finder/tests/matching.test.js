@@ -7,6 +7,7 @@ import {
   parseAnswers, parseISODate, rankTrips, scoreBreakdown, scoreTrip,
 } from '../js/matching.js';
 import { SCENE_NAMES, sceneSVG } from '../js/scenes.js';
+import { formatTrips, matrixToTrips, parseCSV } from '../tools/import-matrix.mjs';
 
 // The live data file (checked for problems) and a frozen copy of the prototype's sample trips
 // (used for the ranking scenarios, so replacing trips.json never breaks them).
@@ -242,4 +243,59 @@ test('filters narrow the list and count what each option would show', () => {
   assert.ok(filterTrips(upcoming, { budget: 'under-2500' }).every((t) => t.priceMin <= 2500));
   const seasons = filterCounts(upcoming, { theme: 'sauna', season: 'winter', budget: '' }, 'season');
   assert.deepEqual(seasons, { spring: 0, summer: 0, autumn: 2, winter: 2 }, 'counts ignore the filter being changed');
+});
+
+const matrixCSV = readFileSync(new URL('../data/retreats-2027.csv', import.meta.url), 'utf8');
+
+test('the 2027 feature matrix imports cleanly', () => {
+  const rows = parseCSV(matrixCSV);
+  const raw = matrixToTrips(matrixCSV);
+  assert.equal(raw.length, rows.length);
+  const { trips, warnings } = loadTrips({ trips: raw });
+  assert.deepEqual(warnings, []);
+  assert.equal(trips.length, rows.length);
+  for (const t of trips) {
+    assert.ok(t.themes.length, `${t.id} gets at least one theme`);
+    assert.ok(SCENE_NAMES.includes(t.scene), `${t.id} gets a known scene`);
+    assert.ok(t.pace && t.travel, `${t.id} gets a pace and a flight band`);
+    assert.equal(t.suitableForKnown, false, 'the matrix does not say who a trip suits');
+  }
+  const byId = Object.fromEntries(raw.map((t) => [t.source_id, t]));
+  assert.ok(byId['RY27-013'].themes.includes('sauna'), 'Lakes, Saunas & Summer Days is a sauna trip');
+  assert.deepEqual(byId['RY27-006'].themes, ['restorative', 'sun']);
+  assert.equal(byId['RY27-006'].featured, 'Best first retreat');
+  assert.equal(byId['RY27-022'].scene, 'towers');
+  assert.equal(byId['RY27-008'].pace, 'active');
+  assert.equal(byId['RY27-002'].travel, 'short');
+  assert.equal(byId['RY27-016'].travel, 'medium');
+  assert.equal(byId['RY27-013'].verified, true);
+});
+
+test('trips.json is the current import of the matrix', { skip: !String(live.note || '').includes('feature matrix') }, () => {
+  const fresh = JSON.parse(formatTrips(matrixToTrips(matrixCSV), live.note));
+  assert.deepEqual(live, fresh, 'run "npm run import" after changing the CSV');
+});
+
+test('a trip that does not record who it suits is scored on the other three answers', () => {
+  const unknown = trip({ suitable_for: undefined });
+  assert.equal(unknown.suitableForKnown, false);
+  const s = scoreTrip(unknown, answers());
+  assert.equal(s.criteria.who.status, 'unknown');
+  assert.equal(s.max, MAX_SCORE - 10);
+  assert.equal(s.score, s.max);
+  assert.equal(s.percent, 100);
+  assert.ok(s.ticksEveryBox);
+  const text = explainMatch(s, answers());
+  assert.doesNotMatch(text.why, /solo/, 'no claim about who it suits');
+  assert.equal(text.caveat, null);
+  assert.equal(scoreBreakdown(s, answers()).find((r) => r.key === 'who').detail, 'Not recorded for this trip yet');
+});
+
+test('pace and flight-time filters', () => {
+  const trips = [trip({ id: 'a', pace: 'gentle', travel: 'short' }), trip({ id: 'b', pace: 'active', travel: 'long' }), trip({ id: 'c' })];
+  assert.deepEqual(filterTrips(trips, { pace: 'gentle' }).map((t) => t.id), ['a']);
+  assert.deepEqual(filterTrips(trips, { travel: 'long' }).map((t) => t.id), ['b']);
+  assert.deepEqual(filterCounts(trips, {}, 'pace'), { gentle: 1, moderate: 0, active: 1 });
+  const { warnings } = normaliseTrip({ id: 'x', title: 'X', destination: 'Y', start_date: '2027-01-01', end_date: '2027-01-02', price_min: 1, pace: 'sprint' });
+  assert.match(warnings.join(), /unknown pace/);
 });

@@ -191,6 +191,25 @@
           </div>
           <button class="text-link filters__clear" type="button" id="filters-clear" hidden>Clear filters</button>
         </div>
+        <details class="more-filters" id="more-filters" hidden>
+          <summary>More filters: pace and flight time <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="filters filters--more" role="group" aria-label="More filters">
+            <div class="filter">
+              <label for="filter-pace">Pace</label>
+              <div class="filter__control">
+                <select id="filter-pace" data-filter="pace"></select>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div class="filter">
+              <label for="filter-travel">Flight</label>
+              <div class="filter__control">
+                <select id="filter-travel" data-filter="travel"></select>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </details>
         <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
         <ul class="trip-grid" id="trip-list"></ul>
         <noscript><p class="trips__empty">This prototype needs JavaScript to show the trips and the quiz.</p></noscript>

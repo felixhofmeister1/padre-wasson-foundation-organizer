@@ -5,7 +5,8 @@
  */
 
 import {
-  ANSWER_KEYS, BUDGETS, BUDGET_STRETCH_GBP, MAX_SCORE, MONTH_IDS, MONTH_NAMES, PARTIAL_POINTS, SEASONS, THEMES, WEIGHTS,
+  ANSWER_KEYS, BUDGETS, BUDGET_STRETCH_GBP, MAX_SCORE, MONTH_IDS, MONTH_NAMES, PACES, PARTIAL_POINTS, PROFILE_KEYS,
+  SEASONS, THEMES, TRAVEL, WEIGHTS,
   answerLabel, explainMatch, featuredTrips, filterCounts, filterTrips, formatDateRange, formatPrice, formatPriceRange,
   isUpcoming, loadTrips, parseAnswers, parseISODate, rankTrips, scoreBreakdown, todayStamp,
 } from './matching.js';
@@ -136,7 +137,7 @@ const state = {
   signup: null,
   lastProgress: 0,
   view: null,
-  filters: { theme: '', season: '', budget: '' },
+  filters: { theme: '', season: '', budget: '', pace: '', travel: '' },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -173,6 +174,7 @@ const els = {
   picksLede: document.querySelector('.picks__lede'),
   filters: Object.fromEntries([...document.querySelectorAll('[data-filter]')].map((el) => [el.dataset.filter, el])),
   filtersClear: $('filters-clear'),
+  moreFilters: $('more-filters'),
 };
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -199,7 +201,7 @@ function statusBadge(trip) {
 
 function metaList(trip, extraClass = '') {
   return `<ul class="meta ${extraClass}">
-    <li>${icon('calendar')}<span>${esc(formatDateRange(trip.start, trip.end))} · ${trip.lengthDays} days</span></li>
+    <li>${icon('calendar')}<span>${esc(formatDateRange(trip.start, trip.end))} · ${trip.nights ? `${trip.nights} nights` : `${trip.lengthDays} days`}</span></li>
     ${trip.teacher ? `<li>${icon('user')}<span>With ${esc(trip.teacher)}</span></li>` : ''}
     <li>${icon('price')}<span><strong>${esc(formatPriceRange(trip.priceMin, trip.priceMax))}</strong> per person</span></li>
   </ul>`;
@@ -241,16 +243,23 @@ function renderPicks(matches) {
   els.picksList.innerHTML = picks.map((t) => tripCard(t, { pick: true, isMatch: matches.has(t.id) })).join('');
 }
 
-const FILTER_KEYS = ['theme', 'season', 'budget'];
-const FILTER_ANY = { theme: 'Any type', season: 'Any time', budget: 'Any budget' };
+const FILTER_KEYS = ['theme', 'season', 'budget', 'pace', 'travel'];
+const EXTRA_FILTERS = ['pace', 'travel']; // only shown when the trip data has them
+const FILTER_ANY = { theme: 'Any type', season: 'Any time', budget: 'Any budget', pace: 'Any pace', travel: 'Any distance' };
 const FILTER_LABEL = {
   theme: (v) => THEMES[v].label,
   season: (v) => SEASONS[v].label,
   budget: (v) => BUDGETS[v].label,
+  pace: (v) => PACES[v].label,
+  travel: (v) => TRAVEL[v].label,
 };
 const isFiltered = () => FILTER_KEYS.some((k) => state.filters[k]);
+const emptyFilters = () => Object.fromEntries(FILTER_KEYS.map((k) => [k, '']));
 
 function renderFilters(upcoming) {
+  const extras = EXTRA_FILTERS.filter((key) => upcoming.some((t) => t[key]));
+  els.moreFilters.hidden = extras.length === 0;
+  for (const key of EXTRA_FILTERS) els.filters[key].closest('.filter').hidden = !extras.includes(key);
   for (const key of FILTER_KEYS) {
     const current = state.filters[key];
     const counts = filterCounts(upcoming, state.filters, key);
@@ -261,6 +270,7 @@ function renderFilters(upcoming) {
     els.filters[key].value = current;
   }
   els.filtersClear.hidden = !isFiltered();
+  if (EXTRA_FILTERS.some((k) => state.filters[k])) els.moreFilters.open = true;
 }
 
 function renderList() {
@@ -381,7 +391,7 @@ function resultCard(scored, index) {
   const rows = scoreBreakdown(scored, state.answers).map((r) => `<tr class="is-${r.status}">
       <th scope="row">${esc(r.question)}<span>${esc(r.answer)}</span></th>
       <td>${esc(r.detail)}</td>
-      <td>${r.points}/${r.max}</td>
+      <td>${r.max ? `${r.points}/${r.max}` : '–'}</td>
     </tr>`).join('');
   return `<li class="result-card">
     <div class="media">${media(trip)}${badge}${statusBadge(trip)}</div>
@@ -397,12 +407,12 @@ function resultCard(scored, index) {
       <div class="result-card__actions">
         ${moreButton(trip)}
         <details class="score">
-          <summary>How we scored this: ${scored.score}/${MAX_SCORE} ${icon('chevron')}</summary>
+          <summary>How we scored this: ${scored.score}/${scored.max} ${icon('chevron')}</summary>
           <table>
             <caption class="visually-hidden">Score breakdown for ${esc(trip.title)}</caption>
             <thead class="visually-hidden"><tr><th scope="col">Question and your answer</th><th scope="col">How this trip fits</th><th scope="col">Points</th></tr></thead>
             <tbody>${rows}</tbody>
-            <tfoot><tr><th scope="row">Total</th><td></td><td>${scored.score}/${MAX_SCORE}</td></tr></tfoot>
+            <tfoot><tr><th scope="row">Total</th><td></td><td>${scored.score}/${scored.max}</td></tr></tfoot>
           </table>
         </details>
       </div>
@@ -476,7 +486,7 @@ function renderResults() {
             <li><strong>What you’re craving: ${WEIGHTS.craving}</strong> if it’s one of the trip’s themes.</li>
             <li><strong>When you can travel: ${WEIGHTS.when}</strong> if the trip runs then (${PARTIAL_POINTS.whenNearby} if it’s a month either side).</li>
             <li><strong>Budget: ${WEIGHTS.budget}</strong> if the price range overlaps yours (${PARTIAL_POINTS.budgetUnder} if it’s cheaper, ${PARTIAL_POINTS.budgetStretch} if it starts within ${formatPrice(BUDGET_STRETCH_GBP)} above).</li>
-            <li><strong>Who’s travelling: ${WEIGHTS.who}</strong> if the trip suits solo travellers, couples or friends as you chose.</li>
+            <li><strong>Who’s travelling: ${WEIGHTS.who}</strong> if the trip suits solo travellers, couples or friends as you chose. Where a trip doesn’t record this yet, it isn’t counted either way, and the score is out of ${MAX_SCORE - WEIGHTS.who}.</li>
           </ul>
           <p>A trip “ticks every box” when it fully meets all four answers. Those come first, then the closest of the rest. Trips that are sold out or have already started are never suggested.</p>
         </div>
@@ -727,6 +737,30 @@ els.compareBtns.forEach((b) => b.addEventListener('click', () => setCompare(b.da
 
 /* ---------- Trip details ---------- */
 
+const sentence = (items) => items.map((v) => v.charAt(0).toUpperCase() + v.slice(1)).join(', ');
+
+/** The feature-matrix facts for a trip: what it's like at a glance and its 1–5 profile. */
+function tripFacts(trip) {
+  const rows = [
+    trip.experiences.length && ['Experience', sentence(trip.experiences)],
+    trip.landscapes.length && ['Landscape', sentence(trip.landscapes)],
+    trip.climate && ['Climate', sentence([trip.climate])],
+    trip.pace && ['Pace', PACES[trip.pace].label],
+    trip.travel && ['From the UK', TRAVEL[trip.travel].label],
+  ].filter(Boolean);
+  const profile = Object.entries(PROFILE_KEYS).filter(([key]) => trip.profile[key]);
+  if (!rows.length && !profile.length) return '';
+  const dots = (n) => `<span class="profile__dots" aria-hidden="true">${[1, 2, 3, 4, 5].map((i) => `<span class="${i <= n ? 'is-on' : ''}"></span>`).join('')}</span>`;
+  return `<div class="facts">
+    ${rows.length ? `<dl class="facts__list">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+    ${profile.length ? `<div class="profile">
+      <p class="profile__title">Trip profile</p>
+      <ul class="profile__list">${profile.map(([key, label]) => `<li><span class="profile__label">${label}</span>${dots(trip.profile[key])}<span class="visually-hidden">${trip.profile[key]} out of 5</span></li>`).join('')}</ul>
+    </div>` : ''}
+    <p class="facts__note">${trip.verified ? 'Activities confirmed on the trip page. ' : ''}Profile, climate and flight time are estimates from the trip pages, to be checked by the team.</p>
+  </div>`;
+}
+
 function openTrip(id) {
   const trip = state.trips.find((t) => t.id === id);
   if (!trip) return;
@@ -739,6 +773,7 @@ function openTrip(id) {
       ${metaList(trip, 'meta--columns')}
       ${trip.summary ? `<p class="dialog__summary">${esc(trip.summary)}</p>` : ''}
       ${trip.highlights.length ? `<ul class="dialog__highlights">${trip.highlights.map((h) => `<li>${icon('check')}<span>${esc(h)}</span></li>`).join('')}</ul>` : ''}
+      ${tripFacts(trip)}
       <div class="dialog__actions">
         <button class="btn btn--forest" type="button" data-action="enquire">${soldOut ? 'Join the waiting list' : 'Enquire about this trip'}</button>
         <button class="btn btn--outline" type="button" data-action="close-dialog">Close</button>
@@ -829,7 +864,7 @@ els.panel.addEventListener('input', (event) => {
 });
 
 function clearFilters() {
-  state.filters = { theme: '', season: '', budget: '' };
+  state.filters = emptyFilters();
   renderList();
   els.filters.theme.focus();
 }
@@ -846,7 +881,7 @@ document.addEventListener('click', (event) => {
   }
 });
 
-document.querySelector('.filters').addEventListener('change', (event) => {
+els.trips.addEventListener('change', (event) => {
   const key = event.target.dataset.filter;
   if (!key) return;
   state.filters[key] = event.target.value;

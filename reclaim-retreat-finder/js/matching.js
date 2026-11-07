@@ -52,6 +52,27 @@ export const TRAVELLERS = {
 
 export const STATUSES = ['available', 'few_places', 'sold_out'];
 
+/* Optional browsing criteria, e.g. from a scored feature matrix of the trips. */
+export const PACES = {
+  gentle: { label: 'Gentle' },
+  moderate: { label: 'Moderate' },
+  active: { label: 'Active' },
+};
+
+export const TRAVEL = {
+  short: { label: 'Short flight (Europe)' },
+  medium: { label: 'Medium flight' },
+  long: { label: 'Long haul' },
+};
+
+export const PROFILE_KEYS = {
+  restoration: 'Rest',
+  adventure: 'Adventure',
+  culture: 'Culture',
+  remoteness: 'Remoteness',
+  intensity: 'Physical effort',
+};
+
 const DAY_MS = 86400000;
 
 /* ---------- Answers ---------- */
@@ -211,7 +232,26 @@ export function normaliseTrip(raw, index = 0) {
   let suitableFor = stringList(raw.suitable_for);
   for (const w of suitableFor) if (!TRAVELLERS[w]) warnings.push(`${where}: unknown suitable_for "${w}" (use ${Object.keys(TRAVELLERS).join(', ')}).`);
   suitableFor = suitableFor.filter((w) => TRAVELLERS[w]);
-  if (!suitableFor.length) suitableFor = Object.keys(TRAVELLERS);
+  // Without suitable_for we don't know who a trip suits: it is neither counted for nor against.
+  const suitableForKnown = suitableFor.length > 0;
+  if (!suitableForKnown) suitableFor = Object.keys(TRAVELLERS);
+
+  const pick = (value, allowed, field) => {
+    if (value == null || value === '') return '';
+    const v = String(value).trim().toLowerCase();
+    if (allowed[v]) return v;
+    warnings.push(`${where}: unknown ${field} "${value}" (use ${Object.keys(allowed).join(', ')}).`);
+    return '';
+  };
+  const pace = pick(raw.pace, PACES, 'pace');
+  const travel = pick(raw.travel, TRAVEL, 'travel');
+  const profile = {};
+  if (raw.profile && typeof raw.profile === 'object') {
+    for (const key of Object.keys(PROFILE_KEYS)) {
+      const n = Number(raw.profile[key]);
+      if (Number.isInteger(n) && n >= 1 && n <= 5) profile[key] = n;
+    }
+  }
 
   let status = typeof raw.status === 'string' ? raw.status.trim().toLowerCase() : 'available';
   if (!STATUSES.includes(status)) {
@@ -238,7 +278,16 @@ export function normaliseTrip(raw, index = 0) {
       themes,
       season,
       suitableFor,
+      suitableForKnown,
       status,
+      pace,
+      travel,
+      profile,
+      nights: Number.isInteger(raw.nights) && raw.nights > 0 ? raw.nights : 0,
+      landscapes: stringList(raw.landscapes),
+      experiences: stringList(raw.experiences),
+      climate: typeof raw.climate === 'string' ? raw.climate.trim() : '',
+      verified: raw.verified === true,
       summary: typeof raw.summary === 'string' ? raw.summary : '',
       highlights: Array.isArray(raw.highlights) ? raw.highlights.filter((h) => typeof h === 'string' && h.trim()) : [],
       scene: typeof raw.scene === 'string' ? raw.scene : '',
@@ -292,17 +341,19 @@ function inBudget(trip, budget) {
 }
 
 /** Narrows the list by theme, season and budget band; an empty value means "any". */
-export function filterTrips(trips, { theme = '', season = '', budget = '' } = {}) {
+export function filterTrips(trips, { theme = '', season = '', budget = '', pace = '', travel = '' } = {}) {
   return trips.filter((t) =>
     (!theme || t.themes.includes(theme)) &&
     (!season || t.season.includes(season)) &&
-    (!budget || inBudget(t, budget)));
+    (!budget || inBudget(t, budget)) &&
+    (!pace || t.pace === pace) &&
+    (!travel || t.travel === travel));
 }
 
 /** For one filter, how many trips each option would show given the other filters. */
 export function filterCounts(trips, filters, key) {
-  const values = { theme: Object.keys(THEMES), season: Object.keys(SEASONS), budget: Object.keys(BUDGETS) }[key];
-  return Object.fromEntries(values.map((v) => [v, filterTrips(trips, { ...filters, [key]: v }).length]));
+  const values = { theme: THEMES, season: SEASONS, budget: BUDGETS, pace: PACES, travel: TRAVEL }[key];
+  return Object.fromEntries(Object.keys(values).map((v) => [v, filterTrips(trips, { ...filters, [key]: v }).length]));
 }
 
 /* ---------- Scoring ---------- */
@@ -337,30 +388,37 @@ export function scoreTrip(trip, answers) {
   const craving = trip.themes.includes(answers.craving)
     ? { status: 'full', points: WEIGHTS.craving }
     : { status: 'none', points: 0 };
-  const who = trip.suitableFor.includes(answers.who)
-    ? { status: 'full', points: WEIGHTS.who }
-    : { status: 'none', points: 0 };
+  // A trip with no "who it suits" data scores out of the other three answers only.
+  const who = !trip.suitableForKnown
+    ? { status: 'unknown', points: 0, max: 0 }
+    : trip.suitableFor.includes(answers.who)
+      ? { status: 'full', points: WEIGHTS.who, max: WEIGHTS.who }
+      : { status: 'none', points: 0, max: WEIGHTS.who };
   const criteria = {
     craving: { ...craving, max: WEIGHTS.craving },
     when: { ...scoreWhen(trip, answers.when), max: WEIGHTS.when },
     budget: { ...scoreBudget(trip, answers.budget), max: WEIGHTS.budget },
-    who: { ...who, max: WEIGHTS.who },
+    who,
   };
   const score = ANSWER_KEYS.reduce((sum, k) => sum + criteria[k].points, 0);
-  const fullCount = ANSWER_KEYS.filter((k) => criteria[k].status === 'full').length;
+  const max = ANSWER_KEYS.reduce((sum, k) => sum + criteria[k].max, 0);
+  const known = ANSWER_KEYS.filter((k) => criteria[k].status !== 'unknown');
+  const fullCount = known.filter((k) => criteria[k].status === 'full').length;
   return {
     trip,
     score,
-    percent: Math.round((score / MAX_SCORE) * 100),
+    max,
+    percent: Math.round((score / max) * 100),
     criteria,
     fullCount,
-    ticksEveryBox: fullCount === ANSWER_KEYS.length,
+    ticksEveryBox: fullCount === known.length,
   };
 }
 
 function compareScored(a, b) {
   return (
     Number(b.ticksEveryBox) - Number(a.ticksEveryBox) ||
+    b.percent - a.percent ||
     b.score - a.score ||
     b.fullCount - a.fullCount ||
     a.trip.start - b.trip.start ||
@@ -450,6 +508,6 @@ export function scoreBreakdown(scored, answers) {
     { key: 'craving', question: 'Craving', answer: answerLabel('craving', answers.craving), detail: criteria.craving.status === 'full' ? 'A main theme of this trip' : 'Not a main theme', ...criteria.craving },
     { key: 'when', question: 'When', answer: answerLabel('when', answers.when), detail: whenDetail, ...criteria.when },
     { key: 'budget', question: 'Budget', answer: answerLabel('budget', answers.budget), detail: budgetDetail, ...criteria.budget },
-    { key: 'who', question: 'Travelling', answer: answerLabel('who', answers.who), detail: criteria.who.status === 'full' ? 'Suits you' : 'Better for others', ...criteria.who },
+    { key: 'who', question: 'Travelling', answer: answerLabel('who', answers.who), detail: { full: 'Suits you', none: 'Better for others', unknown: 'Not recorded for this trip yet' }[criteria.who.status], ...criteria.who },
   ];
 }

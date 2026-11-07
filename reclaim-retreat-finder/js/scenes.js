@@ -1,7 +1,7 @@
 /*
  * Placeholder landscapes: a calm, flat illustration for each trip until real photography is
  * added (set "image" in trips.json). Pick one with "scene" in trips.json: peaks, towers, arctic,
- * islands, coast, fjord, volcano, baobab, palms, desert, loch, tea, aerial. Unknown or empty -> peaks.
+ * islands, coast, fjord, volcano, baobab, palms, desert, loch, tea, aerial, steppe. Unknown or empty -> peaks.
  */
 
 let uid = 0;
@@ -334,6 +334,23 @@ const SCENES = {
       `<path d="${wake}" stroke="#ffffff" stroke-width="${r1(20 * s)}" fill="none" opacity="0.18" stroke-linecap="round"/>` +
       `<path d="${wake}" stroke="#ffffff" stroke-width="${r1(5 * s)}" fill="none" opacity="0.65" stroke-linecap="round"/>` +
       `<rect x="${r1(bx - 6 * s)}" y="${r1(by - 26 * s)}" width="${r1(12 * s)}" height="${r1(30 * s)}" rx="${r1(6 * s)}" fill="#f7f5f0" transform="rotate(-28 ${r1(bx)} ${r1(by)})"/>`;
+  },
+  steppe(w, h, rand, id) {
+    const s = h / 600;
+    const ground = h * 0.7;
+    let yurts = '';
+    [[0.3, 1], [0.37, 0.8], [0.72, 0.9]].forEach(([fx, k]) => {
+      const x = w * fx;
+      const r = 26 * s * k;
+      yurts += `<path d="M${r1(x - r)} ${r1(ground + 6 * s)} v${r1(-r * 0.7)} q${r1(r)} ${r1(-r * 0.75)} ${r1(r * 2)} 0 v${r1(r * 0.7)} Z" fill="#f7f3ea"/>`;
+      yurts += `<rect x="${r1(x - r * 0.18)}" y="${r1(ground + 6 * s - r * 0.45)}" width="${r1(r * 0.36)}" height="${r1(r * 0.45)}" fill="#b5523a"/>`;
+    });
+    return sky(id, w, h, ['#cfe0e6', '#e9eee6', '#f4efe2']) +
+      range(w, h, ridge(w, rand, { base: h * 0.5, amp: h * 0.16, count: 10, sharp: true }), '#b8c4c6', '#f3f4ef') +
+      hill(w, h, ridge(w, rand, { base: h * 0.62, amp: h * 0.08, count: 6 }), '#a7b07a') +
+      hill(w, h, ridge(w, rand, { base: ground + 8 * s, amp: h * 0.04, count: 5 }), '#c2b56b') +
+      yurts +
+      hill(w, h, ridge(w, rand, { base: h * 0.92, amp: h * 0.05, count: 5 }), '#8f9a55');
   },
   tea(w, h, rand, id) {
     const s = h / 600;
