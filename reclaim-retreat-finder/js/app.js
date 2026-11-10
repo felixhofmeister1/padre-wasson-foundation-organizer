@@ -11,6 +11,7 @@ import {
   isUpcoming, loadTrips, parseAnswers, parseISODate, rankTrips, scoreBreakdown, todayStamp,
 } from './matching.js';
 import { sceneSVG } from './scenes.js';
+import { article, personaFromAnswers, personaFromFilters, shareText } from './persona.js';
 
 /* ---------- Icons ---------- */
 
@@ -175,6 +176,7 @@ const els = {
   filters: Object.fromEntries([...document.querySelectorAll('[data-filter]')].map((el) => [el.dataset.filter, el])),
   filtersClear: $('filters-clear'),
   moreFilters: $('more-filters'),
+  personaPanel: $('persona-panel'),
 };
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -214,6 +216,64 @@ function moreButton(trip, style = 'btn--forest') {
 }
 
 const themeLine = (trip) => trip.themes.filter((t) => THEMES[t]).map((t) => THEMES[t].label).join(' · ');
+
+/* ---------- Traveller type (persona) ---------- */
+
+const MODE_LABEL = {
+  quiz: 'Diagnostic mode · from your quiz answers',
+  filters: 'Filtering mode · from your filters',
+};
+
+function shareUrl() {
+  // Only offer the page address where it is a real, shareable one (not inside an embedding frame).
+  const framed = window.self !== window.top;
+  return !framed && /^https?:$/.test(window.location.protocol) ? window.location.origin + window.location.pathname : '';
+}
+
+function personaCard(persona, { headingTag = 'h3', headingId = '', topTrip = null, note = '' } = {}) {
+  const id = headingId ? ` id="${headingId}" tabindex="-1"` : '';
+  const text = shareText(persona, topTrip, shareUrl());
+  return `<div class="persona persona--${persona.key}">
+    <div class="persona__emblem" aria-hidden="true">${icon(persona.key)}</div>
+    <div class="persona__body">
+      <p class="persona__mode">${esc(MODE_LABEL[persona.source])}</p>
+      <${headingTag} class="persona__name"${id}>You’re ${article(persona.name)} <span>${esc(persona.name)}</span></${headingTag}>
+      ${persona.streak ? `<p class="persona__streak">with ${article(persona.streak)} ${esc(persona.streak)} streak</p>` : ''}
+      <p class="persona__tagline">${esc(persona.tagline)}</p>
+      <p class="persona__summary">${esc(persona.summary)}</p>
+      ${persona.traits.length ? `<ul class="persona__traits" aria-label="Your traits">${persona.traits.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${note ? `<p class="persona__note">${esc(note)}</p>` : ''}
+      <div class="persona__share">
+        <button class="btn btn--outline btn--small" type="button" data-action="share-persona" data-share="${esc(text)}">Copy my traveller type</button>
+        <p class="persona__status" role="status"></p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/** Next to the trip list: filtering mode while filters are on, else the quiz result, else an invitation. */
+function renderPersonaPanel(upcoming, shown) {
+  const fromFilters = isFiltered() ? personaFromFilters(state.filters, shown, upcoming) : null;
+  state.filterPersona = fromFilters;
+  const quizTrips = state.result ? state.result.picks.map((p) => p.trip) : [];
+  const fromQuiz = !fromFilters && state.result ? personaFromAnswers(state.answers, quizTrips) : null;
+  if (fromFilters) {
+    els.personaPanel.innerHTML = personaCard(fromFilters, { topTrip: shown[0] });
+  } else if (fromQuiz) {
+    els.personaPanel.innerHTML = personaCard(fromQuiz, { topTrip: quizTrips[0], note: 'Your quiz matches are marked in the list.' });
+  } else {
+    els.personaPanel.innerHTML = `<div class="persona persona--invite">
+      <div class="persona__emblem" aria-hidden="true">${icon('compass')}</div>
+      <div class="persona__body">
+        <p class="persona__mode">Two ways to find out</p>
+        <h3 class="persona__name">What kind of traveller are you?</h3>
+        <p class="persona__summary"><b>Filtering mode:</b> pick a filter above and we’ll work out your traveller type as you go.</p>
+        <p class="persona__summary"><b>Diagnostic mode:</b> answer four quick questions for your type and your three best trips.</p>
+        <div class="persona__share"><button class="btn btn--forest btn--small" type="button" data-action="diagnose">Diagnose me ${icon('arrowRight', 'icon--nudge')}</button></div>
+      </div>
+    </div>`;
+  }
+}
 
 /* ---------- Trip list ---------- */
 
@@ -287,9 +347,11 @@ function renderList() {
   }
 
   const shown = filterTrips(upcoming, state.filters);
+  renderPersonaPanel(upcoming, shown);
   const marked = matches.size ? ' · your matches are marked' : '';
+  const type = state.filterPersona ? ` · you’re ${article(state.filterPersona.name)} ${state.filterPersona.name}` : '';
   els.count.textContent = isFiltered()
-    ? `Showing ${shown.length} of ${upcoming.length} trips${marked}`
+    ? `Showing ${shown.length} of ${upcoming.length} trips${type}${marked}`
     : `${upcoming.length} upcoming ${plural(upcoming.length, 'trip', 'trips')}, soonest first${marked}`;
   els.list.innerHTML = shown.length
     ? shown.map((trip) => tripCard(trip, { isMatch: matches.has(trip.id) })).join('')
@@ -462,6 +524,7 @@ function renderResults() {
   const result = rankTrips(state.trips, state.answers, { today: state.today, limit: 3 });
   state.result = result;
   const copy = resultsCopy(result);
+  const persona = personaFromAnswers(state.answers, result.picks.map((p) => p.trip));
 
   const chips = ANSWER_KEYS.map((key) => {
     const label = answerLabel(key, state.answers[key]);
@@ -470,8 +533,9 @@ function renderResults() {
 
   els.panel.innerHTML = `${quizBar({ backLabel: 'Back', stepLabel: 'Your matches' })}
     <div class="quiz__body">
+      ${persona ? personaCard(persona, { headingTag: 'h2', headingId: 'q-title', topTrip: result.picks[0]?.trip }) : ''}
       <div class="results__head">
-        <h2 class="results__title" id="q-title" tabindex="-1">${esc(copy.title)}</h2>
+        <${persona ? 'h3' : 'h2'} class="results__title"${persona ? '' : ' id="q-title" tabindex="-1"'}>${esc(copy.title)}</${persona ? 'h3' : 'h2'}>
         ${copy.intro ? `<p class="results__intro">${esc(copy.intro)}</p>` : ''}
         <ul class="answer-chips" aria-label="Your answers"><li class="answer-chips__label" aria-hidden="true">You chose:</li>${chips}</ul>
         ${copy.notice ? `<p class="results__notice">${icon('info')}<span>${esc(copy.notice)}</span></p>` : ''}
@@ -863,6 +927,24 @@ els.panel.addEventListener('input', (event) => {
   }
 });
 
+function copyPersona(button) {
+  const status = button.parentElement.querySelector('.persona__status');
+  const text = button.dataset.share;
+  const done = () => { status.textContent = 'Copied. Paste it anywhere.'; };
+  const fallback = () => {
+    // Clipboard refused (e.g. in an embedded frame): show the text selected, ready to copy by hand.
+    status.innerHTML = `<label class="visually-hidden" for="persona-copy">Your traveller type</label><textarea id="persona-copy" class="persona__copy" readonly rows="3">${esc(text)}</textarea>`;
+    const area = status.querySelector('textarea');
+    area.focus();
+    area.select();
+  };
+  try {
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } catch {
+    fallback();
+  }
+}
+
 function clearFilters() {
   state.filters = emptyFilters();
   renderList();
@@ -873,6 +955,9 @@ document.addEventListener('click', (event) => {
   const trigger = event.target.closest('[data-action="trip"]');
   if (trigger) { openTrip(trigger.dataset.trip); return; }
   if (event.target.closest('[data-action="clear-filters"]')) { clearFilters(); return; }
+  const share = event.target.closest('[data-action="share-persona"]');
+  if (share) { copyPersona(share); return; }
+  if (event.target.closest('[data-action="diagnose"]')) { openQuiz(); return; }
   // A link to the hash we're already on fires no hashchange, so route it here.
   const link = event.target.closest('a[href^="#"]');
   if (link && link.getAttribute('href') === window.location.hash && viewFor(link.getAttribute('href'))) {

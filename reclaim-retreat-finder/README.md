@@ -6,6 +6,11 @@ A mock homepage and **Our Trips** page for Reclaim Yourself that make it quicker
 - **Three ways in,** under the homepage hero: answer 4 questions, start with the team's picks, or browse and filter.
 - **Our picks:** a short "Start with our three picks" row on the trips page, each with a reason (e.g. "Best first retreat"). Set with `featured` in `trips.json`.
 - **Filters:** type, season and budget, with live counts. Options that would show nothing are greyed out, so a filter never leads to an empty page. **More filters** (folded away) adds pace and flight time from the UK, from the 2027 feature matrix.
+- **"What kind of traveller are you?"** Everyone gets a playful traveller type (Trailblazer, Slow Restorer, Curious Explorer, Wild Wanderer, Heat & Ice Seeker or Sun Chaser) with traits and the trips that fit it, in two modes:
+  - **Diagnostic mode:** the quiz result opens with the visitor's type, then their three best trips.
+  - **Filtering mode:** as soon as someone picks a filter, a card beside the filtered list works out their type from those filters and updates as they change them.
+
+  A "Copy my traveller type" button gives them a line to share.
 - **The trip list stays put.** A banner at the top ("Not sure where to go? Find your retreat in one minute.") opens the quiz in place. All trips are still listed below, and every quiz screen has a "Browse all trips" link and a Close button.
 - **Four questions, one per screen,** with a progress bar and a Back button: what you're craving, when you can travel (season, month or "I'm flexible"), budget, and who's travelling.
 - **Results:** the top 3 trips as cards with an image, destination, dates, teacher, price range, a one-line "Why this matches you", a "Find out more" button, and a "How we scored this" breakdown. The email box "Get your matches + the free retreat guide" sits directly under the cards.
@@ -45,7 +50,7 @@ Open the deployed link on a phone and on a laptop.
 2. **Three ways in.** Scroll down to "Three ways to find your retreat".
 3. **The way in.** Tap **Find my retreat**. The quiz opens at the top of the trips page; the list is still underneath.
 4. **Four taps.** Each answer moves to the next question. Back and Close are always there, and so is **Browse all trips**.
-5. **Results.** Each card says in plain words why it fits. Open **How we scored this** to show the scoring isn't a black box. Tap **Find out more** to see the trip details.
+5. **Results.** The visitor's traveller type comes first, then each card says in plain words why it fits. Open **How we scored this** to show the scoring isn't a black box. Tap **Find out more** to see the trip details.
 6. **Capture.** Enter an email in the sign-up box. Nothing is sent in the prototype.
 7. **Back to browsing.** Close the quiz and scroll: "Start with our three picks", then the filters. Pick **Adventure** and **Autumn**: 27 trips drop to a handful. Open **More filters** for pace and flight time. Your quiz matches are marked in the list.
 8. **One trip's profile.** Tap **Find out more** on any trip to see its experience, landscape, climate and 1–5 profile from the matrix.
@@ -137,6 +142,17 @@ The matrix doesn't say who each trip suits (solo, couple, friends), so the quiz'
 
 If something in the file is wrong (an unknown theme, a missing date, a duplicate id), the page still loads and leaves that trip out or ignores that tag. Each problem is listed in the browser console (open the developer tools to see it). `npm test` also checks that `trips.json` loads cleanly.
 
+## How traveller types work
+
+The rules are in [`js/persona.js`](js/persona.js) and are deliberately simple; it's a hook, not a personality test.
+
+- **Diagnostic mode (quiz):** the "what are you craving" answer picks the type. When, budget and who's travelling become traits (e.g. "Autumn traveller", "Bucket-list budget", "Happy to go solo").
+- **Filtering mode (browse):** a chosen Type filter picks the type. Otherwise it's the theme that stands out most in the trips shown: among themes at least half of them share, the one most over-represented compared with all trips. Season, budget, pace and flight time become traits.
+- **Streak:** a second theme most of the trips share, e.g. "Wild Wanderer with a Trailblazer streak".
+- **Description:** the type's line, plus the landscapes the trips have most in common ("Your kind of places: mountains, glaciers and wilderness") and how many trips fit, from what price.
+
+To rename a type or change its wording or colour, edit `PERSONAS` at the top of `js/persona.js`.
+
 ## How matching works
 
 Every bookable trip (not sold out, not yet started) gets points for each answer, out of 100:
@@ -180,6 +196,7 @@ There is no backend, so nothing is sent. On submit, the page validates the addre
 | `css/styles.css` | All styling (brand colours are variables at the top) |
 | `js/app.js` | The page behaviour: quiz, results, sign-up, list, trip details |
 | `js/matching.js` | Scoring, ranking, the "why this matches you" wording, the picks and the filters, with no page code |
+| `js/persona.js` | The traveller types for both modes, with no page code |
 | `js/scenes.js` | The illustrated placeholder images |
 | `fonts/` | Barlow and Barlow Condensed, self-hosted (SIL Open Font License, see `fonts/OFL.txt`) |
 | `data/retreats-2027.csv` | The 2027 retreat feature matrix, as received |

@@ -485,6 +485,78 @@ h1, h2, h3 {
   .filters--more { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
 }
 
+/* ---------- Traveller type (persona) ---------- */
+
+.persona {
+  --persona: var(--forest);
+  --focus: var(--forest);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-top: 6px solid var(--persona);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+.persona--adventure { --persona: #2D4C3E; }
+.persona--restorative { --persona: #55705A; }
+.persona--cultural { --persona: #9A4F35; }
+.persona--wild { --persona: #1F5A63; }
+.persona--sauna { --persona: #5B3A2E; }
+.persona--sun { --persona: #9A6516; }
+.persona--invite { --persona: var(--forest); }
+@media (min-width: 600px) {
+  .persona { grid-template-columns: auto minmax(0, 1fr); }
+}
+
+.persona__emblem {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--persona);
+  color: var(--cream);
+  box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px var(--persona);
+}
+.persona__emblem .icon { width: 36px; height: 36px; }
+.persona__body { display: grid; gap: 8px; }
+.persona__mode { color: var(--muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.persona__name { font-size: clamp(1.9rem, 5vw, 2.4rem); line-height: 1; color: var(--ink); }
+.persona__name span { color: var(--persona); }
+.persona__streak { margin-top: -2px; color: var(--persona); font-weight: 600; }
+.persona__tagline { font-size: 1.1rem; font-style: italic; }
+.persona__summary { color: var(--muted); line-height: 1.5; }
+.persona__summary b { color: var(--ink); }
+.persona__traits { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.persona__traits li { padding: 4px 12px; border: 1px solid var(--persona); border-radius: 999px; color: var(--persona); font-size: 0.88rem; font-weight: 600; }
+.persona__note { font-size: 0.92rem; font-weight: 600; }
+.persona__share { display: grid; gap: 6px; justify-items: start; margin-top: 6px; }
+.persona__status { color: var(--muted); font-size: 0.9rem; }
+.persona__copy { width: 100%; min-width: 0; padding: 10px; border: 1.5px solid var(--forest); border-radius: 6px; background: #fff; font: inherit; font-size: 0.92rem; resize: none; }
+
+/* In the quiz results the card sits on the dark panel, wide, above the trips. */
+.finder__panel .persona { margin-bottom: 24px; }
+@media (min-width: 768px) {
+  .finder__panel .persona { grid-template-columns: auto minmax(0, 1fr); padding: 28px 32px; gap: 28px; }
+  .finder__panel .persona__emblem { width: 104px; height: 104px; }
+  .finder__panel .persona__emblem .icon { width: 52px; height: 52px; }
+  .finder__panel .persona__name { font-size: 3rem; }
+}
+
+/* Browsing: the traveller type sits beside the filtered list. */
+.browse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.browse__list { min-width: 0; }
+@media (min-width: 1024px) {
+  .browse { grid-template-columns: 340px minmax(0, 1fr); gap: 36px; align-items: start; }
+  .persona-panel { position: sticky; top: 16px; }
+  .persona-panel .persona { grid-template-columns: 1fr; }
+  .browse .trip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ---------- Trip facts (feature matrix) ---------- */
 
 .facts { display: grid; gap: 14px; padding: 16px; border-radius: var(--radius); background: var(--paper); border: 1px solid var(--line); }

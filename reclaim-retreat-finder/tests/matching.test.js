@@ -8,6 +8,7 @@ import {
 } from '../js/matching.js';
 import { SCENE_NAMES, sceneSVG } from '../js/scenes.js';
 import { formatTrips, matrixToTrips, parseCSV } from '../tools/import-matrix.mjs';
+import { distinctiveThemes, personaFromAnswers, personaFromFilters, shareText, topPlaces } from '../js/persona.js';
 
 // The live data file (checked for problems) and a frozen copy of the prototype's sample trips
 // (used for the ranking scenarios, so replacing trips.json never breaks them).
@@ -298,4 +299,53 @@ test('pace and flight-time filters', () => {
   assert.deepEqual(filterCounts(trips, {}, 'pace'), { gentle: 1, moderate: 0, active: 1 });
   const { warnings } = normaliseTrip({ id: 'x', title: 'X', destination: 'Y', start_date: '2027-01-01', end_date: '2027-01-02', price_min: 1, pace: 'sprint' });
   assert.match(warnings.join(), /unknown pace/);
+});
+
+test('diagnostic mode: the quiz craving decides the traveller type, the other answers add traits', () => {
+  const a = answers({ craving: 'wild', when: 'autumn', budget: 'over-4000', who: 'solo' });
+  const trips = [trip({ id: 'x', themes: ['wild', 'adventure'], landscapes: ['mountain', 'glacier'] }), trip({ id: 'y', themes: ['wild', 'adventure'], landscapes: ['mountain'] })];
+  const p = personaFromAnswers(a, trips);
+  assert.equal(p.title, 'The Wild Wanderer');
+  assert.equal(p.source, 'quiz');
+  assert.equal(p.streak, 'Trailblazer', 'a theme most of the trips share becomes the streak');
+  assert.deepEqual(p.traits, ['Autumn traveller', 'Bucket-list budget', 'Happy to go solo']);
+  assert.match(p.summary, /Your kind of places: mountains and glaciers\./);
+  assert.match(p.summary, /Your two best trips are below\./);
+  assert.equal(personaFromAnswers({ craving: 'golf' }, trips), null);
+});
+
+test('filtering mode: no filters, no type; a chosen type wins; otherwise what stands out in the trips shown', () => {
+  const all = [
+    trip({ id: 'a', themes: ['adventure'] }), trip({ id: 'b', themes: ['adventure'] }), trip({ id: 'c', themes: ['adventure'] }),
+    trip({ id: 'd', themes: ['adventure', 'wild'] }), trip({ id: 'e', themes: ['restorative', 'sun'] }), trip({ id: 'f', themes: ['restorative'] }),
+  ];
+  assert.equal(personaFromFilters({ theme: '', season: '' }, all, all), null);
+  assert.equal(personaFromFilters({ theme: 'sun' }, [all[4]], all).key, 'sun');
+  // Restorative is in 2 of 6 trips overall but in both trips shown: it stands out more than adventure.
+  const shown = [all[4], all[5]];
+  assert.deepEqual(distinctiveThemes(shown, all).slice(0, 2), ['restorative', 'sun']);
+  const p = personaFromFilters({ budget: 'under-2500', pace: 'gentle' }, shown, all);
+  assert.equal(p.key, 'restorative');
+  assert.equal(p.source, 'filters');
+  assert.deepEqual(p.traits, ['Short-escape budget', 'Gentle pace']);
+  assert.match(p.summary, /2 trips fit you, from £3,000\./);
+});
+
+test('persona places fall back to destinations, and the share line reads naturally', () => {
+  assert.deepEqual(topPlaces([trip({ destination: 'Norway' }), trip({ destination: 'Chile' })]), ['Norway', 'Chile']);
+  const p = personaFromAnswers(answers({ craving: 'adventure' }), [trip({ title: 'Big Trek' })]);
+  assert.equal(shareText(p, { title: 'Big Trek' }), 'I’m a Trailblazer, and my top retreat is Big Trek. What kind of traveller are you?');
+  assert.match(shareText(p, null, 'https://example.com/'), /are you\? https:\/\/example\.com\/$/);
+});
+
+test('every real 2027 filter choice gives a traveller type', () => {
+  const { trips } = loadTrips(live);
+  for (const [key, values] of [['theme', THEMES], ['season', { spring: 1, summer: 1, autumn: 1, winter: 1 }], ['budget', { 'under-2500': 1, '2500-4000': 1, 'over-4000': 1 }]]) {
+    for (const value of Object.keys(values)) {
+      const shown = filterTrips(trips, { [key]: value });
+      if (!shown.length) continue;
+      const p = personaFromFilters({ [key]: value }, shown, trips);
+      assert.ok(p && p.name && p.summary, `${key}=${value} gives a type`);
+    }
+  }
 });

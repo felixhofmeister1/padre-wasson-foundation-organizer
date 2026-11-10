@@ -127,9 +127,9 @@
 
         <div class="container finder__banner" id="finder-banner">
           <div class="finder__copy">
-            <p class="eyebrow eyebrow--gold">Trip finder</p>
+            <p class="eyebrow eyebrow--gold">What kind of traveller are you?</p>
             <p class="finder__title">Not sure where to go?</p>
-            <p class="finder__lede">Find your retreat in one minute.</p>
+            <p class="finder__lede">Find your traveller type and your three best trips in one minute.</p>
           </div>
           <div class="finder__actions">
             <button class="btn btn--cream btn--large" type="button" id="open-quiz" aria-controls="finder-panel" aria-expanded="false">
@@ -210,8 +210,13 @@
             </div>
           </div>
         </details>
-        <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
-        <ul class="trip-grid" id="trip-list"></ul>
+        <div class="browse">
+          <div class="persona-panel" id="persona-panel"></div>
+          <div class="browse__list">
+            <p class="trips__count" id="trips-count" aria-live="polite">Loading trips…</p>
+            <ul class="trip-grid" id="trip-list"></ul>
+          </div>
+        </div>
         <noscript><p class="trips__empty">This prototype needs JavaScript to show the trips and the quiz.</p></noscript>
       </section>
     </div>
